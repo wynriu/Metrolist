@@ -138,6 +138,7 @@ import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.constants.ArchiveTuneCanvasKey
 import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
@@ -148,6 +149,8 @@ import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.PlayerButtonsStyle
 import com.metrolist.music.constants.PlayerButtonsStyleKey
 import com.metrolist.music.constants.PlayerHorizontalPadding
+import com.metrolist.music.constants.PlayerSystemStyle
+import com.metrolist.music.constants.PlayerSystemStyleKey
 import com.metrolist.music.constants.QueuePeekHeight
 import com.metrolist.music.constants.SleepTimerDefaultKey
 import com.metrolist.music.constants.SleepTimerFadeOutKey
@@ -224,6 +227,11 @@ fun BottomSheetPlayer(
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
     val (hideStatusBarOnFullscreen) = rememberPreference(HideStatusBarOnFullscreenKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    val playerSystemStyle by rememberEnumPreference(
+        key = PlayerSystemStyleKey,
+        defaultValue = PlayerSystemStyle.METROLIST,
+    )
+    val archiveTuneCanvasEnabled by rememberPreference(ArchiveTuneCanvasKey, false)
 
     var showInlineLyrics by rememberSaveable {
         mutableStateOf(false)
@@ -252,7 +260,11 @@ fun BottomSheetPlayer(
     val shouldUseDarkButtonColors =
         remember(playerBackground, useDarkTheme) {
             when (playerBackground) {
-                PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> true
+                PlayerBackgroundStyle.BLUR,
+                PlayerBackgroundStyle.GRADIENT,
+                PlayerBackgroundStyle.LIVE_MESH,
+                PlayerBackgroundStyle.GLOW_ANIMATED,
+                -> true
                 PlayerBackgroundStyle.DEFAULT -> useDarkTheme
             }
         }
@@ -267,7 +279,11 @@ fun BottomSheetPlayer(
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
             when (playerBackground) {
-                PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
+                PlayerBackgroundStyle.BLUR,
+                PlayerBackgroundStyle.GRADIENT,
+                PlayerBackgroundStyle.LIVE_MESH,
+                PlayerBackgroundStyle.GLOW_ANIMATED,
+                -> {
                     insetsController.isAppearanceLightStatusBars = false
                 }
 
@@ -318,6 +334,19 @@ fun BottomSheetPlayer(
 
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    var archiveTuneCanvasUrl by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(archiveTuneCanvasEnabled, playerSystemStyle, mediaMetadata?.id) {
+        val metadata = mediaMetadata
+        archiveTuneCanvasUrl =
+            if (archiveTuneCanvasEnabled && playerSystemStyle == PlayerSystemStyle.ARCHIVETUNE && metadata != null) {
+                ArchiveTuneCanvasClient.getArtworkUrl(
+                    title = metadata.title,
+                    artist = metadata.artists.joinToString(separator = ", ") { it.name },
+                )
+            } else {
+                null
+            }
+    }
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
     val automix by playerConnection.service.automixItems.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
@@ -814,7 +843,11 @@ fun BottomSheetPlayer(
 
     val bottomSheetBackgroundColor =
         when (playerBackground) {
-            PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
+            PlayerBackgroundStyle.BLUR,
+            PlayerBackgroundStyle.GRADIENT,
+            PlayerBackgroundStyle.LIVE_MESH,
+            PlayerBackgroundStyle.GLOW_ANIMATED,
+            -> {
                 MaterialTheme.colorScheme.surfaceContainer
             }
 
@@ -910,9 +943,38 @@ fun BottomSheetPlayer(
                         }
                     }
 
-                    else -> {
-                        PlayerBackgroundStyle.DEFAULT
+                    PlayerBackgroundStyle.LIVE_MESH,
+                    PlayerBackgroundStyle.GLOW_ANIMATED,
+                    -> {
+                        if (playerSystemStyle == PlayerSystemStyle.ARCHIVETUNE && isPlaying) {
+                            ArchiveTunePlayerBackdrop(
+                                style = playerBackground,
+                                palette = gradientColors,
+                                alpha = backgroundAlpha,
+                            )
+                        }
                     }
+
+                    else -> Unit
+                }
+                if (playerSystemStyle == PlayerSystemStyle.ARCHIVETUNE && archiveTuneCanvasUrl != null) {
+                    AsyncImage(
+                        model =
+                            ImageRequest
+                                .Builder(context)
+                                .data(archiveTuneCanvasUrl)
+                                .crossfade(true)
+                                .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().alpha(backgroundAlpha * 0.72f),
+                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.18f)),
+                    )
                 }
             }
         },
@@ -1876,6 +1938,18 @@ fun BottomSheetPlayer(
                                     showLyrics = showLyrics,
                                     positionProvider = { effectivePosition },
                                 )
+                            } else if (playerSystemStyle == PlayerSystemStyle.ARCHIVETUNE) {
+                                ArchiveTuneArtworkFrame(
+                                    palette = gradientColors,
+                                    modifier = Modifier.animateContentSize(),
+                                ) {
+                                    Thumbnail(
+                                        sliderPositionProvider = sliderPositionProvider,
+                                        isPlayerExpanded = isExpandedProvider,
+                                        isLandscape = true,
+                                        isListenTogetherGuest = isListenTogetherGuest,
+                                    )
+                                }
                             } else {
                                 Thumbnail(
                                     sliderPositionProvider = sliderPositionProvider,
@@ -1939,6 +2013,17 @@ fun BottomSheetPlayer(
                                     showLyrics = showLyrics,
                                     positionProvider = { effectivePosition },
                                 )
+                            } else if (playerSystemStyle == PlayerSystemStyle.ARCHIVETUNE) {
+                                ArchiveTuneArtworkFrame(
+                                    palette = gradientColors,
+                                    modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
+                                ) {
+                                    Thumbnail(
+                                        sliderPositionProvider = sliderPositionProvider,
+                                        isPlayerExpanded = isExpandedProvider,
+                                        isListenTogetherGuest = isListenTogetherGuest,
+                                    )
+                                }
                             } else {
                                 Thumbnail(
                                     sliderPositionProvider = sliderPositionProvider,

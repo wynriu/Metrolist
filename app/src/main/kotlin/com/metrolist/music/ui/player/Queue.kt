@@ -1327,7 +1327,11 @@ private fun PlayerQueueButton(
                     iconButtonColor
                 } else {
                     when (playerBackground) {
-                        PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
+                        PlayerBackgroundStyle.BLUR,
+                        PlayerBackgroundStyle.GRADIENT,
+                        PlayerBackgroundStyle.LIVE_MESH,
+                        PlayerBackgroundStyle.GLOW_ANIMATED,
+                        -> {
                             Color.White
                         }
 

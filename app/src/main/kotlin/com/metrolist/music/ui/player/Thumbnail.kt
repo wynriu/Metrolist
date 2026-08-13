@@ -191,6 +191,8 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
         PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
         PlayerBackgroundStyle.BLUR -> Color.White
         PlayerBackgroundStyle.GRADIENT -> Color.White
+        PlayerBackgroundStyle.LIVE_MESH -> Color.White
+        PlayerBackgroundStyle.GLOW_ANIMATED -> Color.White
     }
 }
 
