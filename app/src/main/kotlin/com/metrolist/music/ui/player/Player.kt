@@ -490,6 +490,8 @@ fun BottomSheetPlayer(
                 PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
                 PlayerBackgroundStyle.BLUR -> Color.White
                 PlayerBackgroundStyle.GRADIENT -> Color.White
+                PlayerBackgroundStyle.LIVE_MESH -> Color.White
+                PlayerBackgroundStyle.GLOW_ANIMATED -> Color.White
             },
         label = "TextBackgroundColor",
     )
@@ -500,6 +502,8 @@ fun BottomSheetPlayer(
                 PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surface
                 PlayerBackgroundStyle.BLUR -> Color.Black
                 PlayerBackgroundStyle.GRADIENT -> Color.Black
+                PlayerBackgroundStyle.LIVE_MESH -> Color.Black
+                PlayerBackgroundStyle.GLOW_ANIMATED -> Color.Black
             },
         label = "icBackgroundColor",
     )
@@ -963,7 +967,6 @@ fun BottomSheetPlayer(
                             ImageRequest
                                 .Builder(context)
                                 .data(archiveTuneCanvasUrl)
-                                .crossfade(true)
                                 .build(),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
