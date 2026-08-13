@@ -59,6 +59,20 @@ val SwipeToSongKey = booleanPreferencesKey("SwipeToSong")
 val SwipeToRemoveSongKey = booleanPreferencesKey("SwipeToRemoveSong")
 val UseNewPlayerDesignKey = booleanPreferencesKey("useNewPlayerDesign")
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
+val PlayerSystemStyleKey = stringPreferencesKey("playerSystemStyle")
+val ArchiveTuneCanvasKey = booleanPreferencesKey("archiveTuneCanvas")
+val ArchiveTuneLyricsEffectsKey = stringPreferencesKey("archiveTuneLyricsEffects")
+val ArchiveTuneLyricsBounceFactorKey = floatPreferencesKey("archiveTuneLyricsBounceFactor")
+val ArchiveTuneLyricsGlowFactorKey = floatPreferencesKey("archiveTuneLyricsGlowFactor")
+val ArchiveTuneLyricsFillTransitionWidthKey = floatPreferencesKey("archiveTuneLyricsFillTransitionWidth")
+val ArchiveTuneLyricsLrcBounceEnabledKey = booleanPreferencesKey("archiveTuneLyricsLrcBounceEnabled")
+
+enum class ArchiveTuneLyricsEffect {
+    CLASSIC,
+    LIQUID_GLOW,
+    BOUNCE,
+}
+
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
@@ -89,6 +103,9 @@ val EnableLrcLibKey = booleanPreferencesKey("enableLrclib")
 val EnableBetterLyricsKey = booleanPreferencesKey("enableBetterLyrics")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
 val EnableLyricsPlus = booleanPreferencesKey("enableLyricsPlus")
+val EnableYouLyPlusLyricsKey = booleanPreferencesKey("enableYouLyPlusLyrics")
+val EnableSimpMusicLyricsKey = booleanPreferencesKey("enableSimpMusicLyrics")
+val EnableUnisonLyricsKey = booleanPreferencesKey("enableUnisonLyrics")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
@@ -432,6 +449,11 @@ enum class PreferredLyricsProvider {
     LYRICSPLUS
 }
 
+enum class PlayerSystemStyle {
+    METROLIST,
+    ARCHIVETUNE,
+}
+
 enum class PlayerButtonsStyle {
     DEFAULT,
     PRIMARY,
@@ -442,6 +464,8 @@ enum class PlayerBackgroundStyle {
     DEFAULT,
     GRADIENT,
     BLUR,
+    LIVE_MESH,
+    GLOW_ANIMATED,
 }
 
 val TopSize = stringPreferencesKey("topSize")
