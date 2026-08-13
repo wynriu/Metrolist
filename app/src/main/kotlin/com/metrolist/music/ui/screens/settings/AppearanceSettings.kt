@@ -56,6 +56,13 @@ import androidx.core.content.edit
 import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
+import com.metrolist.music.constants.ArchiveTuneCanvasKey
+import com.metrolist.music.constants.ArchiveTuneLyricsBounceFactorKey
+import com.metrolist.music.constants.ArchiveTuneLyricsEffect
+import com.metrolist.music.constants.ArchiveTuneLyricsEffectsKey
+import com.metrolist.music.constants.ArchiveTuneLyricsFillTransitionWidthKey
+import com.metrolist.music.constants.ArchiveTuneLyricsGlowFactorKey
+import com.metrolist.music.constants.ArchiveTuneLyricsLrcBounceEnabledKey
 import com.metrolist.music.constants.ChipSortTypeKey
 import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DefaultOpenTabKey
@@ -86,6 +93,8 @@ import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.PlayerButtonsStyle
 import com.metrolist.music.constants.PlayerButtonsStyleKey
+import com.metrolist.music.constants.PlayerSystemStyle
+import com.metrolist.music.constants.PlayerSystemStyleKey
 import com.metrolist.music.constants.PureBlackMiniPlayerKey
 import com.metrolist.music.constants.RespectAgentPositioningKey
 import com.metrolist.music.constants.SelectedThemeColorKey
@@ -167,6 +176,26 @@ fun AppearanceSettings(
             UseNewPlayerDesignKey,
             defaultValue = true,
         )
+    val (playerSystemStyle, onPlayerSystemStyleChange) =
+        rememberEnumPreference(
+            PlayerSystemStyleKey,
+            defaultValue = PlayerSystemStyle.METROLIST,
+        )
+    val (archiveTuneCanvas, onArchiveTuneCanvasChange) =
+        rememberPreference(ArchiveTuneCanvasKey, defaultValue = false)
+    val (archiveTuneLyricsEffect, onArchiveTuneLyricsEffectChange) =
+        rememberEnumPreference(
+            ArchiveTuneLyricsEffectsKey,
+            defaultValue = ArchiveTuneLyricsEffect.LIQUID_GLOW,
+        )
+    val (archiveTuneLyricsBounceFactor, onArchiveTuneLyricsBounceFactorChange) =
+        rememberPreference(ArchiveTuneLyricsBounceFactorKey, defaultValue = 1f)
+    val (archiveTuneLyricsGlowFactor, onArchiveTuneLyricsGlowFactorChange) =
+        rememberPreference(ArchiveTuneLyricsGlowFactorKey, defaultValue = 1f)
+    val (archiveTuneLyricsFillTransitionWidth, onArchiveTuneLyricsFillTransitionWidthChange) =
+        rememberPreference(ArchiveTuneLyricsFillTransitionWidthKey, defaultValue = 8f)
+    val (archiveTuneLyricsLrcBounceEnabled, onArchiveTuneLyricsLrcBounceEnabledChange) =
+        rememberPreference(ArchiveTuneLyricsLrcBounceEnabledKey, defaultValue = true)
     val (miniPlayerBackground, onMiniPlayerBackgroundChange) =
         rememberEnumPreference(
             MiniPlayerBackgroundStyleKey,
@@ -241,6 +270,8 @@ fun AppearanceSettings(
 
     var showExperimentalLyricsBetaDialog by remember { mutableStateOf(false) }
     var showLyricsAnimationStyleDialog by remember { mutableStateOf(false) }
+    var showArchiveTuneLyricsEffectDialog by remember { mutableStateOf(false) }
+    var showArchiveTuneLyricsTuningDialog by remember { mutableStateOf(false) }
     var showLyricsTextSizeDialog by remember { mutableStateOf(false) }
     var showLyricsLineSpacingDialog by remember { mutableStateOf(false) }
 
@@ -359,6 +390,10 @@ fun AppearanceSettings(
         mutableStateOf(false)
     }
 
+    var showPlayerSystemStyleDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     var showPlayerButtonsStyleDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -408,6 +443,73 @@ fun AppearanceSettings(
                 }
             },
         )
+    }
+
+    if (showArchiveTuneLyricsEffectDialog) {
+        EnumDialog(
+            onDismiss = { showArchiveTuneLyricsEffectDialog = false },
+            onSelect = {
+                onArchiveTuneLyricsEffectChange(it)
+                showArchiveTuneLyricsEffectDialog = false
+            },
+            title = stringResource(R.string.archivetune_lyrics_effect),
+            current = archiveTuneLyricsEffect,
+            values = ArchiveTuneLyricsEffect.entries.toList(),
+            valueText = {
+                when (it) {
+                    ArchiveTuneLyricsEffect.CLASSIC -> stringResource(R.string.archivetune_lyrics_effect_classic)
+                    ArchiveTuneLyricsEffect.LIQUID_GLOW -> stringResource(R.string.archivetune_lyrics_effect_liquid_glow)
+                    ArchiveTuneLyricsEffect.BOUNCE -> stringResource(R.string.archivetune_lyrics_effect_bounce)
+                }
+            },
+        )
+    }
+
+    if (showArchiveTuneLyricsTuningDialog) {
+        var tempBounceFactor by remember { mutableFloatStateOf(archiveTuneLyricsBounceFactor) }
+        var tempGlowFactor by remember { mutableFloatStateOf(archiveTuneLyricsGlowFactor) }
+        var tempFillWidth by remember { mutableFloatStateOf(archiveTuneLyricsFillTransitionWidth) }
+        DefaultDialog(
+            onDismiss = { showArchiveTuneLyricsTuningDialog = false },
+            buttons = {
+                TextButton(
+                    onClick = {
+                        tempBounceFactor = 1f
+                        tempGlowFactor = 1f
+                        tempFillWidth = 8f
+                    },
+                ) { Text(stringResource(R.string.reset)) }
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = { showArchiveTuneLyricsTuningDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    onClick = {
+                        onArchiveTuneLyricsBounceFactorChange(tempBounceFactor)
+                        onArchiveTuneLyricsGlowFactorChange(tempGlowFactor)
+                        onArchiveTuneLyricsFillTransitionWidthChange(tempFillWidth)
+                        showArchiveTuneLyricsTuningDialog = false
+                    },
+                ) { Text(stringResource(android.R.string.ok)) }
+            },
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.archivetune_lyrics_tuning),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                Text(stringResource(R.string.archivetune_lyrics_bounce_factor, tempBounceFactor))
+                Slider(tempBounceFactor, { tempBounceFactor = it }, valueRange = 0f..2f, modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.archivetune_lyrics_glow_factor, tempGlowFactor))
+                Slider(tempGlowFactor, { tempGlowFactor = it }, valueRange = 0f..2f, modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.archivetune_lyrics_fill_width, tempFillWidth.roundToInt()))
+                Slider(tempFillWidth, { tempFillWidth = it }, valueRange = 2f..24f, modifier = Modifier.fillMaxWidth())
+            }
+        }
     }
 
     if (showLyricsTextSizeDialog) {
@@ -571,6 +673,27 @@ fun AppearanceSettings(
                     PlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
                     PlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                     PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
+                    PlayerBackgroundStyle.LIVE_MESH -> stringResource(R.string.player_background_live_mesh)
+                    PlayerBackgroundStyle.GLOW_ANIMATED -> stringResource(R.string.player_background_glow_animated)
+                }
+            },
+        )
+    }
+
+    if (showPlayerSystemStyleDialog) {
+        EnumDialog(
+            onDismiss = { showPlayerSystemStyleDialog = false },
+            onSelect = {
+                onPlayerSystemStyleChange(it)
+                showPlayerSystemStyleDialog = false
+            },
+            title = stringResource(R.string.player_system_style),
+            current = playerSystemStyle,
+            values = PlayerSystemStyle.entries.toList(),
+            valueText = {
+                when (it) {
+                    PlayerSystemStyle.METROLIST -> stringResource(R.string.player_system_metrolist)
+                    PlayerSystemStyle.ARCHIVETUNE -> stringResource(R.string.player_system_archivetune)
                 }
             },
         )
@@ -1162,6 +1285,19 @@ fun AppearanceSettings(
                 listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),
+                        title = { Text(stringResource(R.string.player_system_style)) },
+                        description = {
+                            Text(
+                                when (playerSystemStyle) {
+                                    PlayerSystemStyle.METROLIST -> stringResource(R.string.player_system_metrolist)
+                                    PlayerSystemStyle.ARCHIVETUNE -> stringResource(R.string.player_system_archivetune)
+                                },
+                            )
+                        },
+                        onClick = { showPlayerSystemStyleDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.palette),
                         title = { Text(stringResource(R.string.new_player_design)) },
                         trailingContent = {
                             Switch(
@@ -1190,10 +1326,31 @@ fun AppearanceSettings(
                                     PlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
                                     PlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                                     PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
+                                    PlayerBackgroundStyle.LIVE_MESH -> stringResource(R.string.player_background_live_mesh)
+                                    PlayerBackgroundStyle.GLOW_ANIMATED -> stringResource(R.string.player_background_glow_animated)
                                 },
                             )
                         },
                         onClick = { showPlayerBackgroundDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.palette),
+                        title = { Text(stringResource(R.string.archivetune_canvas)) },
+                        description = { Text(stringResource(R.string.archivetune_canvas_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = archiveTuneCanvas,
+                                onCheckedChange = onArchiveTuneCanvasChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(if (archiveTuneCanvas) R.drawable.check else R.drawable.close),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onArchiveTuneCanvasChange(!archiveTuneCanvas) },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.hide_image),
@@ -1434,6 +1591,54 @@ fun AppearanceSettings(
                             },
                         ),
                     )
+
+                    if (experimentalLyrics) {
+                        add(
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.lyrics),
+                                title = { Text(stringResource(R.string.archivetune_lyrics_effect)) },
+                                description = {
+                                    Text(
+                                        when (archiveTuneLyricsEffect) {
+                                            ArchiveTuneLyricsEffect.CLASSIC -> stringResource(R.string.archivetune_lyrics_effect_classic)
+                                            ArchiveTuneLyricsEffect.LIQUID_GLOW -> stringResource(R.string.archivetune_lyrics_effect_liquid_glow)
+                                            ArchiveTuneLyricsEffect.BOUNCE -> stringResource(R.string.archivetune_lyrics_effect_bounce)
+                                        },
+                                    )
+                                },
+                                onClick = { showArchiveTuneLyricsEffectDialog = true },
+                            ),
+                        )
+                        add(
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.tune),
+                                title = { Text(stringResource(R.string.archivetune_lyrics_tuning)) },
+                                description = { Text(stringResource(R.string.archivetune_lyrics_tuning_desc)) },
+                                onClick = { showArchiveTuneLyricsTuningDialog = true },
+                            ),
+                        )
+                        add(
+                            Material3SettingsItem(
+                                icon = painterResource(R.drawable.lyrics),
+                                title = { Text(stringResource(R.string.archivetune_lyrics_lrc_bounce)) },
+                                description = { Text(stringResource(R.string.archivetune_lyrics_lrc_bounce_desc)) },
+                                trailingContent = {
+                                    Switch(
+                                        checked = archiveTuneLyricsLrcBounceEnabled,
+                                        onCheckedChange = onArchiveTuneLyricsLrcBounceEnabledChange,
+                                        thumbContent = {
+                                            Icon(
+                                                painter = painterResource(if (archiveTuneLyricsLrcBounceEnabled) R.drawable.check else R.drawable.close),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                                            )
+                                        },
+                                    )
+                                },
+                                onClick = { onArchiveTuneLyricsLrcBounceEnabledChange(!archiveTuneLyricsLrcBounceEnabled) },
+                            ),
+                        )
+                    }
 
                     if (!experimentalLyrics) {
                         add(
