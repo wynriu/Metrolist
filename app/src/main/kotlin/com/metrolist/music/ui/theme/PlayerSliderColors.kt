@@ -42,7 +42,11 @@ object PlayerSliderColors {
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 }
             }
-            PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
+            PlayerBackgroundStyle.BLUR,
+            PlayerBackgroundStyle.GRADIENT,
+            PlayerBackgroundStyle.LIVE_MESH,
+            PlayerBackgroundStyle.GLOW_ANIMATED,
+            -> {
                 Color.White.copy(alpha = 0.4f)
             }
         }
