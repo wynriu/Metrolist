@@ -47,7 +47,16 @@ jobs:
       - name: Grant execute permission for Gradle Wrapper
         run: chmod +x gradlew
 
-      - name: Build GMS Release APK
+      - name: Decode Android release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          mkdir -p app/keystore
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/keystore/release.keystore
+          chmod 600 app/keystore/release.keystore
+
+      - name: Build signed GMS Release APK
         run: ./gradlew --console=plain assembleGmsRelease --warning-mode summary
         env:
           METROLIST_APPLICATION_ID: com.wynriu.metrolist
@@ -56,11 +65,14 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Upload unsigned GMS Release APK
+      - name: Upload signed GMS Release APK
         uses: actions/upload-artifact@v6
         with:
-          name: metrolist-archivetune-gms-release-unsigned
+          name: metrolist-archivetune-gms-release
           path: app/build/outputs/apk/gms/release/*.apk
           if-no-files-found: error
           retention-days: 14
