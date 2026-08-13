@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.metrolist.music.constants.ArchiveTuneLyricsEffect
 import com.metrolist.music.lyrics.LyricsEntry
 import com.metrolist.music.lyrics.WordTimestamp
 import com.metrolist.music.playback.PlayerConnection
@@ -136,6 +137,11 @@ internal fun LyricsLine(
     romanizeAsMain: Boolean,
     enabledLanguages: List<String>,
     romanizeLyrics: Boolean,
+    archiveTuneLyricsEffect: ArchiveTuneLyricsEffect,
+    archiveTuneLyricsBounceFactor: Float,
+    archiveTuneLyricsGlowFactor: Float,
+    archiveTuneLyricsFillTransitionWidth: Float,
+    archiveTuneLyricsLrcBounceEnabled: Boolean,
     onSizeChanged: (Int) -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -266,7 +272,12 @@ internal fun LyricsLine(
                         expressiveAccent = expressiveAccent,
                         isBackground = item.isBackground,
                         focusedAlpha = focusedAlpha,
-                        alignment = agentTextAlign
+                        alignment = agentTextAlign,
+                        archiveTuneLyricsEffect = archiveTuneLyricsEffect,
+                        archiveTuneLyricsBounceFactor = archiveTuneLyricsBounceFactor,
+                        archiveTuneLyricsGlowFactor = archiveTuneLyricsGlowFactor,
+                        archiveTuneLyricsFillTransitionWidth = archiveTuneLyricsFillTransitionWidth,
+                        archiveTuneLyricsLrcBounceEnabled = archiveTuneLyricsLrcBounceEnabled,
                     )
                 } else {
                     Text(
@@ -330,7 +341,12 @@ private fun WordLevelLyrics(
     expressiveAccent: Color,
     isBackground: Boolean,
     focusedAlpha: Float,
-    alignment: TextAlign
+    alignment: TextAlign,
+    archiveTuneLyricsEffect: ArchiveTuneLyricsEffect,
+    archiveTuneLyricsBounceFactor: Float,
+    archiveTuneLyricsGlowFactor: Float,
+    archiveTuneLyricsFillTransitionWidth: Float,
+    archiveTuneLyricsLrcBounceEnabled: Boolean,
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
@@ -593,7 +609,14 @@ private fun WordLevelLyrics(
                         if (timeSinceStart < 125f) timeSinceStart / 125f
                         else (1f - (timeSinceStart - 125f) / 625f).coerceAtLeast(0f)
                     } else 0f
-                    wordWobbles[wordIdx] = wobble
+                    val effectMultiplier =
+                        when (archiveTuneLyricsEffect) {
+                            ArchiveTuneLyricsEffect.CLASSIC -> 1f
+                            ArchiveTuneLyricsEffect.LIQUID_GLOW -> 0.55f
+                            ArchiveTuneLyricsEffect.BOUNCE -> archiveTuneLyricsBounceFactor.coerceIn(0.25f, 2.5f)
+                        }
+                    wordWobbles[wordIdx] =
+                        if (archiveTuneLyricsLrcBounceEnabled) wobble * effectMultiplier else 0f
                 }
 
                 val lineCurrentPushes = FloatArray(layoutResult.lineCount)
@@ -682,7 +705,11 @@ private fun WordLevelLyrics(
                         ((wProg - cInW / wLen) * wLen).coerceIn(0.0, 1.0).toFloat()
                     } else 0f
 
-                    val shouldGlow = wordItem != null && !isWordSung && sungFactor > 0.001f
+                    val shouldGlow =
+                        wordItem != null &&
+                            !isWordSung &&
+                            sungFactor > 0.001f &&
+                            archiveTuneLyricsEffect != ArchiveTuneLyricsEffect.BOUNCE
 
                     var crescendoDeltaX = 0f
                     var crescendoDeltaY = 0f
@@ -757,8 +784,14 @@ private fun WordLevelLyrics(
                             val fadeFactor = (sungFactor * 5f).coerceIn(0f, 1f) * ((1f - sungFactor) * 8f).coerceIn(0f, 1f)
                             val impactFactor = (((impactRatio - 100f) / 250f).coerceIn(0f, 1f) * 0.6f + ((dur.toFloat() - 300f) / 1500f).coerceIn(0f, 1f) * 0.4f).coerceIn(0f, 1f) * fadeFactor
                             if (impactFactor > 0.01f) {
-                                val glowAlpha = (0.35f * impactFactor).coerceIn(0f, 0.4f)
-                                val baseGlowRadius = 12.dp.toPx() * impactFactor                                                                                    
+                                val glowStrength =
+                                    if (archiveTuneLyricsEffect == ArchiveTuneLyricsEffect.LIQUID_GLOW) {
+                                        archiveTuneLyricsGlowFactor.coerceIn(0.25f, 2.5f)
+                                    } else {
+                                        1f
+                                    }
+                                val glowAlpha = (0.35f * impactFactor * glowStrength).coerceIn(0f, 0.55f)
+                                val baseGlowRadius = 12.dp.toPx() * impactFactor * glowStrength
                                 drawIntoCanvas { canvas ->
                                     glowPaint.maskFilter = BlurMaskFilter(baseGlowRadius, BlurMaskFilter.Blur.NORMAL)
                                     glowPaint.color = expressiveAccent.copy(alpha = glowAlpha).toArgb()
@@ -777,11 +810,20 @@ private fun WordLevelLyrics(
                             if (sWL > 0f) {
                                 clipRect(left = 0f, top = 0f, right = sWL, bottom = charBounds.height) { drawText(letterLayouts[i], color = expressiveAccent) }
                             }
-                            for (j in 0 until 12) {
-                                val start = sWL + (j * eW / 12f)
-                                val end = (sWL + ((j + 1) * eW / 12f) + 0.5f).coerceAtMost(fXL)
+                            val fillSteps =
+                                archiveTuneLyricsFillTransitionWidth
+                                    .coerceIn(2f, 20f)
+                                    .toInt()
+                            for (j in 0 until fillSteps) {
+                                val start = sWL + (j * eW / fillSteps)
+                                val end = (sWL + ((j + 1) * eW / fillSteps) + 0.5f).coerceAtMost(fXL)
                                 if (end > start) {
-                                    clipRect(left = start, top = 0f, right = end, bottom = charBounds.height) { drawText(letterLayouts[i], color = expressiveAccent.copy(alpha = 1f - (j + 0.5f) / 12f)) }
+                                    clipRect(left = start, top = 0f, right = end, bottom = charBounds.height) {
+                                        drawText(
+                                            letterLayouts[i],
+                                            color = expressiveAccent.copy(alpha = 1f - (j + 0.5f) / fillSteps),
+                                        )
+                                    }
                                 }
                             }
                         }

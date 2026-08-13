@@ -90,6 +90,12 @@ import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.AiProviderKey
 import com.metrolist.music.constants.AiSystemPromptKey
+import com.metrolist.music.constants.ArchiveTuneLyricsBounceFactorKey
+import com.metrolist.music.constants.ArchiveTuneLyricsEffect
+import com.metrolist.music.constants.ArchiveTuneLyricsEffectsKey
+import com.metrolist.music.constants.ArchiveTuneLyricsFillTransitionWidthKey
+import com.metrolist.music.constants.ArchiveTuneLyricsGlowFactorKey
+import com.metrolist.music.constants.ArchiveTuneLyricsLrcBounceEnabledKey
 import com.metrolist.music.constants.DeeplApiKey
 import com.metrolist.music.constants.DeeplFormalityKey
 import com.metrolist.music.constants.LyricsClickKey
@@ -167,6 +173,14 @@ fun ExperimentalLyrics(
     val romanizeCyrillicByLine by rememberPreference(LyricsRomanizeCyrillicByLineKey, false)
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val showIntervalIndicator by rememberPreference(ShowIntervalIndicatorKey, true)
+    val archiveTuneLyricsEffect by rememberEnumPreference(
+        ArchiveTuneLyricsEffectsKey,
+        ArchiveTuneLyricsEffect.LIQUID_GLOW,
+    )
+    val archiveTuneLyricsBounceFactor by rememberPreference(ArchiveTuneLyricsBounceFactorKey, 1f)
+    val archiveTuneLyricsGlowFactor by rememberPreference(ArchiveTuneLyricsGlowFactorKey, 1f)
+    val archiveTuneLyricsFillTransitionWidth by rememberPreference(ArchiveTuneLyricsFillTransitionWidthKey, 8f)
+    val archiveTuneLyricsLrcBounceEnabled by rememberPreference(ArchiveTuneLyricsLrcBounceEnabledKey, true)
     
     // AI Translation Preferences
     val openRouterApiKey by rememberPreference(OpenRouterApiKey, "")
@@ -298,7 +312,11 @@ fun ExperimentalLyrics(
 
     val expressiveAccent = when (playerBackground) {
         PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.primary
-        PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> Color.White
+        PlayerBackgroundStyle.BLUR,
+        PlayerBackgroundStyle.GRADIENT,
+        PlayerBackgroundStyle.LIVE_MESH,
+        PlayerBackgroundStyle.GLOW_ANIMATED,
+        -> Color.White
     }
 
     var activeLineIndices by remember { mutableStateOf(emptySet<Int>()) }
@@ -785,6 +803,11 @@ fun ExperimentalLyrics(
                                         respectAgentPositioning = respectAgentPositioning, isAutoScrollEnabled = isAutoScrollEnabled,
                                         displayedCurrentLineIndex = deferredCurrentLineIndex, romanizeAsMain = romanizeAsMain,
                                         enabledLanguages = enabledLanguages, romanizeLyrics = currentSong?.romanizeLyrics == true,
+                                        archiveTuneLyricsEffect = archiveTuneLyricsEffect,
+                                        archiveTuneLyricsBounceFactor = archiveTuneLyricsBounceFactor,
+                                        archiveTuneLyricsGlowFactor = archiveTuneLyricsGlowFactor,
+                                        archiveTuneLyricsFillTransitionWidth = archiveTuneLyricsFillTransitionWidth,
+                                        archiveTuneLyricsLrcBounceEnabled = archiveTuneLyricsLrcBounceEnabled,
                                         onSizeChanged = { itemHeights[listIndex] = it },
                                         onClick = {
                                             if (isSelectionModeActive) {
