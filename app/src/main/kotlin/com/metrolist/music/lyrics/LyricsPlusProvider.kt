@@ -22,6 +22,9 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import timber.log.Timber
 
 @Serializable
@@ -128,12 +131,11 @@ object LyricsPlusProvider : LyricsProvider {
     private const val BINIMUM_API_BASE_URL = "https://lyrics-api.binimum.org/"
 
     private val baseUrls = listOf(
-        "https://lyricsplus.binimum.org", //binimum's alternate server
-        "https://lyricsplus.atomix.one/", //meow's mirror
-        "https://lyricsplus.prjktla.my.id", //main server
-        "https://lyricsplus-seven.vercel.app", //jigen's mirror
-        //"https://lyricsplus.prjktla.workers.dev", //ibra's cf workers (disabled due it has 100000 request per day limit)
-        //"https://lyrics-plus-backend.vercel.app", //ibra's vercel (disabled due it's disabled)
+        "https://lyrics-plus-backend.vercel.app",
+        "https://lyricsplus-seven.vercel.app",
+        "https://lyricsplus.prjktla.my.id",
+        "https://lyricsplus.binimum.org",
+        "https://lyricsplus.atomix.one",
     )
 
     @Volatile
@@ -198,18 +200,24 @@ object LyricsPlusProvider : LyricsProvider {
             return null
         }
 
-        for (baseUrl in getPrioritizedServers()) {
-            try {
-                val result = fetchFromUrl(baseUrl, title, artist, duration, album)
-                if (result != null && !result.lyrics.isNullOrEmpty()) {
-                    lastWorkingServer = baseUrl
-                    return result
+        return coroutineScope {
+            getPrioritizedServers().map { baseUrl ->
+                async {
+                    runCatching { baseUrl to fetchFromUrl(baseUrl, title, artist, duration, album) }
+                        .onFailure { Timber.tag("LyricsPlus").d(it, "Failed to fetch from $baseUrl") }
+                        .getOrNull()
                 }
-            } catch (e: Exception) {
-                Timber.tag("LyricsPlus").d(e, "Failed to fetch from $baseUrl")
-            }
+            }.awaitAll()
+                .asSequence()
+                .mapNotNull { entry ->
+                    val (baseUrl, result) = entry ?: return@mapNotNull null
+                    result?.takeIf { !it.lyrics.isNullOrEmpty() }?.let {
+                        lastWorkingServer = baseUrl
+                        it
+                    }
+                }
+                .firstOrNull()
         }
-        return null
     }
 
     private suspend fun fetchBinimumLyricsApi(
