@@ -84,6 +84,7 @@ import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.listentogether.RoomRole
 import com.metrolist.music.models.MediaMetadata as AppMediaMetadata
 import com.metrolist.music.ui.component.CastButton
+import com.metrolist.music.features.canvas.ui.CanvasArtworkOverlay
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.delay
