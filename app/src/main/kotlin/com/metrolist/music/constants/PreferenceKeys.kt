@@ -59,6 +59,8 @@ val UseNewPlayerDesignKey = booleanPreferencesKey("useNewPlayerDesign")
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
+val CanvasThumbnailAnimationKey = booleanPreferencesKey("canvasThumbnailAnimation")
+val CanvasSourceKey = stringPreferencesKey("canvasSource")
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
 val PauseOnMute = booleanPreferencesKey("pauseOnMute")
 val ResumeOnBluetoothConnectKey = booleanPreferencesKey("resumeOnBluetoothConnect")
@@ -77,6 +79,13 @@ enum class SliderStyle {
     SLIM,
 }
 
+enum class CanvasSource {
+    AUTO,
+    APPLE_MUSIC,
+    VIVIMUSIC,
+    TIDAL,
+}
+
 const val SYSTEM_DEFAULT = "SYSTEM_DEFAULT"
 val AppLanguageKey = stringPreferencesKey("appLanguage")
 val ContentLanguageKey = stringPreferencesKey("contentLanguage")
@@ -85,6 +94,8 @@ val EnableKugouKey = booleanPreferencesKey("enableKugou")
 val EnableLrcLibKey = booleanPreferencesKey("enableLrclib")
 val EnableBetterLyricsKey = booleanPreferencesKey("enableBetterLyrics")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
+val EnableMusixmatchKey = booleanPreferencesKey("enableMusixmatch")
+val EnableSimpMusicKey = booleanPreferencesKey("enableSimpMusic")
 val EnableLyricsPlus = booleanPreferencesKey("enableLyricsPlus")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
