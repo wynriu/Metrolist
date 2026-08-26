@@ -5,6 +5,10 @@
 
 package com.metrolist.music.lyrics
 
+import com.metrolist.music.features.lyrics.LyricsPlusProvider
+import com.metrolist.music.features.lyrics.MusixmatchLyricsProvider
+import com.metrolist.music.features.lyrics.SimpMusicLyricsProvider
+
 object LyricsProviderRegistry {
     private val providerMap = mapOf(
         "Musixmatch" to MusixmatchLyricsProvider,
