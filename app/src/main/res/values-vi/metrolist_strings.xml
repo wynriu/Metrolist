@@ -167,6 +167,10 @@
     <string name="lyrics_glow_effect_desc">Thêm hiệu ứng glowing (phát sáng) và hiệu ứng bounce (nảy) cho phần lời bài hát đang hiển thị</string>
     <string name="enable_better_lyrics">Bật nhà cung cấp lời bài hát Better Lyrics</string>
     <string name="enable_better_lyrics_desc">Lời bài hát đồng bộ theo từng âm tiết cho mọi bài hát, hoàn hảo cho karaoke</string>
+    <string name="enable_musixmatch">Bật Musixmatch</string>
+    <string name="enable_musixmatch_desc">Lời bài hát được đồng bộ từ Musixmatch</string>
+    <string name="enable_simpmusic">Bật SimpMusic</string>
+    <string name="enable_simpmusic_desc">Lời bài hát đồng bộ và lời bài hát thường từ SimpMusic</string>
     <string name="auto_scroll">Đồng bộ lại</string>
     <string name="show_uploaded_playlist">Hiển danh sách phát đã tải lên</string>
     <string name="shuffle_playlist_first">Phát ngẫu nhiên danh sách phát hoặc album đầu tiên</string>
