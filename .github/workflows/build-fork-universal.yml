@@ -1,0 +1,75 @@
+name: Build Fork Universal APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-universal-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and sign universal FOSS APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x gradlew
+
+      - name: Build universal FOSS release APK
+        run: ./gradlew --console=plain assembleFossRelease --warning-mode summary
+        env:
+          METROLIST_APPLICATION_ID: com.metrolist.music
+          METROLIST_APP_NAME: Metrolist Custom
+          METROLIST_BUILD_COMMIT: ${{ github.sha }}
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: workflow_dispatch
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Sign APK with private keystore
+        uses: ilharp/sign-android-release@v2.0.0
+        with:
+          releaseDir: app/build/outputs/apk/foss/release/
+          signingKey: ${{ secrets.KEYSTORE }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          buildToolsVersion: 35.0.0
+
+      - name: Collect signed universal APK
+        run: |
+          set -euo pipefail
+          output_dir="app/build/outputs/apk/foss/release"
+          mkdir -p "$output_dir/out"
+          signed_apk="$(find "$output_dir" -maxdepth 1 -type f \( -name '*-signed.apk' -o -name '*-unsigned-signed.apk' \) | head -n 1)"
+          test -n "$signed_apk"
+          mv "$signed_apk" "$output_dir/out/metrolist-universal-signed.apk"
+
+      - name: Upload universal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrolist-universal-signed
+          path: app/build/outputs/apk/foss/release/out/metrolist-universal-signed.apk
+          if-no-files-found: error
