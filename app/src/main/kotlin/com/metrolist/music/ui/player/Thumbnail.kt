@@ -82,6 +82,7 @@ import com.metrolist.music.constants.SeekExtraSeconds
 import com.metrolist.music.constants.SwipeThumbnailKey
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.listentogether.RoomRole
+import com.metrolist.music.models.MediaMetadata as AppMediaMetadata
 import com.metrolist.music.ui.component.CastButton
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
@@ -210,6 +211,7 @@ fun Thumbnail(
     // Collect states
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val error by playerConnection.error.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
     val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
@@ -403,7 +405,9 @@ fun Thumbnail(
                                 isLandscape = isLandscape,
                                 isListenTogetherGuest = isListenTogetherGuest,
                                 currentMediaId = mediaMetadata?.id,
-                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl
+                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
+                                currentMediaMetadata = mediaMetadata,
+                                isPlaying = isPlaying,
                             )
                         }
                     }
@@ -501,6 +505,8 @@ private fun ThumbnailItem(
     isListenTogetherGuest: Boolean = false,
     currentMediaId: String? = null,
     currentMediaThumbnail: String? = null,
+    currentMediaMetadata: AppMediaMetadata? = null,
+    isPlaying: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
@@ -570,9 +576,19 @@ private fun ThumbnailItem(
                     item.mediaMetadata.artworkUri?.toString()
                 }
 
+                val isCurrent = item.mediaId == currentMediaId
                 ThumbnailImage(
                     artworkUri = artworkUriToUse,
-                    cropArtwork = cropAlbumArt
+                    cropArtwork = cropAlbumArt,
+                    canvasTitle = if (isCurrent) currentMediaMetadata?.title else item.mediaMetadata.title?.toString(),
+                    canvasArtist = if (isCurrent) {
+                        currentMediaMetadata?.artists?.joinToString { it.name }
+                    } else {
+                        item.mediaMetadata.artist?.toString()
+                    },
+                    canvasAlbum = if (isCurrent) currentMediaMetadata?.album?.title else item.mediaMetadata.albumTitle?.toString(),
+                    showCanvas = isCurrent,
+                    isPlaying = isPlaying,
                 )
             }
             
@@ -616,7 +632,12 @@ private fun HiddenThumbnailPlaceholder(
 private fun ThumbnailImage(
     artworkUri: String?,
     cropArtwork: Boolean,
-    modifier: Modifier = Modifier
+    canvasTitle: String?,
+    canvasArtist: String?,
+    canvasAlbum: String?,
+    showCanvas: Boolean,
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
@@ -638,6 +659,15 @@ private fun ThumbnailImage(
             contentScale = if (cropArtwork) ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
+        if (showCanvas) {
+            CanvasArtworkOverlay(
+                title = canvasTitle.orEmpty(),
+                artist = canvasArtist.orEmpty(),
+                album = canvasAlbum.orEmpty(),
+                isPlaying = isPlaying,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
 
