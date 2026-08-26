@@ -386,6 +386,14 @@
     <string name="enable_lyricsplus_desc">Đồng bộ lời bài hát từ nhiều nguồn</string>
     <string name="lyrics_provider_selection">Chọn bên cung cấp</string>
     <string name="lyrics_provider_selection_desc">Chọn các nguồn cung cấp lời bài hát được kích hoạt</string>
+    <string name="canvas_artwork">Ảnh Canvas</string>
+    <string name="enable_canvas_artwork">Bật ảnh Canvas</string>
+    <string name="enable_canvas_artwork_desc">Hiển thị ảnh động trên bài hát hiện tại trong Player khi có sẵn</string>
+    <string name="canvas_source">Nguồn Canvas</string>
+    <string name="canvas_source_auto">Tự động (Apple Music, Tidal, ViviMusic)</string>
+    <string name="canvas_source_apple_music">Apple Music</string>
+    <string name="canvas_source_tidal">Tidal</string>
+    <string name="canvas_source_vivi_music">ViviMusic</string>
     <string name="prevent_duplicate_tracks_in_queue">Tránh lặp lại bài hát trong hàng</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Khi thêm một bài hát đã có sẵn trong hàng chờ, bài hát đó sẽ được chuyển từ vị trí cũ sang vị trí mới thay vì được thêm vào lần nữa</string>
     <string name="lyrics_provider_priority">Ưu tiên nhà cung cấp lời bài hát</string>
