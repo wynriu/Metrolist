@@ -352,9 +352,14 @@ fun BottomSheetPlayer(
     val castDuration by castHandler?.castDuration?.collectAsStateWithLifecycle() ?: remember { mutableLongStateOf(0L) }
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
 
+    var previousMediaId by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(mediaMetadata?.id) {
         TimedCommentsRepository.clearAll()
-        CanvasMediaCache.clearTemporary(context)
+        if (previousMediaId != null && previousMediaId != mediaMetadata?.id) {
+            CanvasMediaCache.clearTemporary(context)
+        }
+        previousMediaId = mediaMetadata?.id
     }
 
     LaunchedEffect(playbackState) {
