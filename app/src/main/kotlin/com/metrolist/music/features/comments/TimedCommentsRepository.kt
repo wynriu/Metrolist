@@ -7,7 +7,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Short-lived in-memory cache for timestamped comments.
+ * Short-lived in-memory cache for highlighted comments.
  * It avoids repeating the same network pagination when the Player is reopened while keeping
  * comment data out of the persistent media caches.
  */
@@ -20,7 +20,7 @@ object TimedCommentsRepository {
         cache[videoId]?.takeIf { it.expiresAt > now }?.let { return it.comments }
 
         val comments = withContext(Dispatchers.IO) {
-            YouTube.timedComments(videoId).getOrDefault(emptyList())
+            YouTube.featuredComments(videoId).getOrDefault(emptyList())
         }
         cache[videoId] = CacheEntry(comments, now + CACHE_TTL_MS)
         return comments
