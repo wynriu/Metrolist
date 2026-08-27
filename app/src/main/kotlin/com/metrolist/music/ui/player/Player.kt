@@ -152,6 +152,7 @@ import com.metrolist.music.constants.QueuePeekHeight
 import com.metrolist.music.constants.SleepTimerDefaultKey
 import com.metrolist.music.constants.SleepTimerFadeOutKey
 import com.metrolist.music.constants.SleepTimerStopAfterCurrentSongKey
+import com.metrolist.music.constants.ShowTimedCommentsKey
 import com.metrolist.music.constants.SliderStyle
 import com.metrolist.music.constants.SliderStyleKey
 import com.metrolist.music.constants.SquigglySliderKey
@@ -172,6 +173,7 @@ import com.metrolist.music.ui.component.PlayerSliderTrack
 import com.metrolist.music.ui.component.ResizableIconButton
 import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
+import com.metrolist.music.features.comments.ui.TimedCommentsStrip
 import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
@@ -222,6 +224,7 @@ fun BottomSheetPlayer(
             defaultValue = true,
         )
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
+    val showTimedComments by rememberPreference(ShowTimedCommentsKey, defaultValue = false)
     val (hideStatusBarOnFullscreen) = rememberPreference(HideStatusBarOnFullscreenKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
@@ -1949,6 +1952,13 @@ fun BottomSheetPlayer(
                             }
                         }
                     }
+
+                    TimedCommentsStrip(
+                        videoId = mediaMetadata?.id,
+                        positionMs = effectivePosition,
+                        enabled = state.isExpanded && showTimedComments && !showInlineLyrics,
+                        textColor = TextBackgroundColor,
+                    )
 
                     mediaMetadata?.let {
                         controlsContent(it)
