@@ -36,6 +36,10 @@ import coil3.compose.AsyncImage
 import com.metrolist.music.R
 import com.metrolist.music.features.comments.TimedCommentsRepository
 import com.metrolist.innertube.models.TimedComment
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+
+private const val COMMENT_DISPLAY_INTERVAL_MS = 5_000L
 
 @Composable
 fun TimedCommentsStrip(
@@ -46,15 +50,45 @@ fun TimedCommentsStrip(
     modifier: Modifier = Modifier,
 ) {
     var comments by remember(videoId) { mutableStateOf<List<TimedComment>>(emptyList()) }
+    var activeComment by remember(videoId) { mutableStateOf<TimedComment?>(null) }
 
     LaunchedEffect(enabled, videoId) {
         comments = emptyList()
+        activeComment = null
         if (!enabled || videoId.isNullOrBlank()) return@LaunchedEffect
-        comments = TimedCommentsRepository.get(videoId)
+        comments = TimedCommentsRepository.get(videoId).distinctBy { it.id }
     }
 
-    val activeComment = remember(comments, positionMs) {
-        comments.lastOrNull { it.timestampMs <= positionMs }
+    val availableComments = remember(comments) {
+        comments.filter { it.text.isNotBlank() }
+    }
+
+    LaunchedEffect(enabled, videoId, availableComments) {
+        activeComment = null
+        if (!enabled || videoId.isNullOrBlank() || availableComments.isEmpty()) return@LaunchedEffect
+
+        fun nextRandomOrder(previousId: String?): List<TimedComment> {
+            val order = availableComments.shuffled()
+            if (order.size > 1 && order.first().id == previousId) {
+                return order.drop(1) + order.first()
+            }
+            return order
+        }
+
+        var order = nextRandomOrder(previousId = null)
+        var index = 0
+        var previousId: String? = null
+        while (isActive) {
+            val comment = order[index]
+            activeComment = comment
+            previousId = comment.id
+            delay(COMMENT_DISPLAY_INTERVAL_MS)
+            index++
+            if (index >= order.size) {
+                order = nextRandomOrder(previousId)
+                index = 0
+            }
+        }
     }
 
     if (!enabled || activeComment == null) return
@@ -68,7 +102,7 @@ fun TimedCommentsStrip(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         CommentAvatar(
-            avatarUrl = activeComment.avatarUrl,
+            avatarUrl = activeComment?.avatarUrl,
             modifier = Modifier.size(34.dp),
         )
 
@@ -82,20 +116,22 @@ fun TimedCommentsStrip(
                     (slideInHorizontally { width -> width / 3 } + fadeIn()) togetherWith
                         (slideOutHorizontally { width -> -width / 3 } + fadeOut())
                 },
-                label = "timedCommentTransition",
+                label = "featuredCommentTransition",
             ) { comment ->
-                Text(
-                    text = comment.text,
-                    color = textColor,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.basicMarquee(
-                        iterations = Int.MAX_VALUE,
-                        initialDelayMillis = 900,
-                        velocity = 35.dp,
-                    ),
-                )
+                comment?.let {
+                    Text(
+                        text = it.text,
+                        color = textColor,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.basicMarquee(
+                            iterations = Int.MAX_VALUE,
+                            initialDelayMillis = 900,
+                            velocity = 35.dp,
+                        ),
+                    )
+                }
             }
         }
     }
