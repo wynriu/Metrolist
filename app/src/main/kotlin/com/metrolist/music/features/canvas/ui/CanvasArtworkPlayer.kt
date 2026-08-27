@@ -1,12 +1,12 @@
 package com.metrolist.music.features.canvas.ui
 
 import com.metrolist.music.features.canvas.AppleMusicCanvasProvider
+import com.metrolist.music.features.canvas.BetterLyricsCanvasProvider
 import com.metrolist.music.features.canvas.CanvasArtwork
 import com.metrolist.music.constants.CanvasSource
 import com.metrolist.music.constants.MaxCanvasCacheSizeKey
 import com.metrolist.music.features.canvas.CanvasMediaCache
 import com.metrolist.music.features.canvas.TidalCanvasProvider
-import com.metrolist.music.features.canvas.ViviMusicCanvasProvider
 
 import android.view.TextureView
 import android.view.ViewGroup
@@ -171,14 +171,14 @@ fun CanvasArtworkOverlay(
                         ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
                         ?: TidalCanvasProvider.getBySongArtist(title, artist, album)
                             ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                        ?: ViviMusicCanvasProvider.getBySongArtist(title, artist, album)
+                        ?: BetterLyricsCanvasProvider.getBySongArtist(title, artist, storefront)
                             ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
                 CanvasSource.APPLE_MUSIC ->
                     AppleMusicCanvasProvider.getBySongArtist(title, artist, album, storefront)
                 CanvasSource.TIDAL ->
                     TidalCanvasProvider.getBySongArtist(title, artist, album)
-                CanvasSource.VIVIMUSIC ->
-                    ViviMusicCanvasProvider.getBySongArtist(title, artist, album)
+                CanvasSource.BETTER_LYRICS ->
+                    BetterLyricsCanvasProvider.getBySongArtist(title, artist, storefront)
             }
         }
         if (fetched != null) {
