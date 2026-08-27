@@ -2,6 +2,8 @@ package com.metrolist.music.features.canvas.ui
 
 import com.metrolist.music.features.canvas.AppleMusicCanvasProvider
 import com.metrolist.music.features.canvas.CanvasArtwork
+import com.metrolist.music.constants.CanvasSource
+import com.metrolist.music.constants.MaxCanvasCacheSizeKey
 import com.metrolist.music.features.canvas.CanvasMediaCache
 import com.metrolist.music.features.canvas.TidalCanvasProvider
 import com.metrolist.music.features.canvas.ViviMusicCanvasProvider
@@ -40,14 +42,18 @@ fun CanvasArtworkPlayer(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val maxCanvasCacheSize by com.metrolist.music.utils.rememberPreference(
+        MaxCanvasCacheSizeKey,
+        defaultValue = CanvasMediaCache.DEFAULT_MAX_CACHE_SIZE_MB,
+    )
     val primary = primaryUrl?.takeIf(String::isNotBlank)
     val fallback = fallbackUrl?.takeIf(String::isNotBlank)
     val initialUrl = primary ?: fallback ?: return
     var currentUrl by remember(initialUrl) { mutableStateOf(initialUrl) }
     var ready by remember(initialUrl) { mutableStateOf(false) }
 
-    val dataSourceFactory = remember(context) {
-        CanvasMediaCache.dataSourceFactory(context)
+    val dataSourceFactory = remember(context, maxCanvasCacheSize) {
+        CanvasMediaCache.dataSourceFactory(context, maxCanvasCacheSize)
     }
     val player = remember(initialUrl, dataSourceFactory) {
         ExoPlayer.Builder(context)
@@ -160,18 +166,18 @@ fun CanvasArtworkOverlay(
         }
         val fetched = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             when (source) {
-                com.metrolist.music.constants.CanvasSource.AUTO ->
+                CanvasSource.AUTO ->
                     AppleMusicCanvasProvider.getBySongArtist(title, artist, album, storefront)
                         ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
                         ?: TidalCanvasProvider.getBySongArtist(title, artist, album)
                             ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
                         ?: ViviMusicCanvasProvider.getBySongArtist(title, artist, album)
                             ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                com.metrolist.music.constants.CanvasSource.APPLE_MUSIC ->
+                CanvasSource.APPLE_MUSIC ->
                     AppleMusicCanvasProvider.getBySongArtist(title, artist, album, storefront)
-                com.metrolist.music.constants.CanvasSource.TIDAL ->
+                CanvasSource.TIDAL ->
                     TidalCanvasProvider.getBySongArtist(title, artist, album)
-                com.metrolist.music.constants.CanvasSource.VIVIMUSIC ->
+                CanvasSource.VIVIMUSIC ->
                     ViviMusicCanvasProvider.getBySongArtist(title, artist, album)
             }
         }
