@@ -173,6 +173,7 @@ import com.metrolist.music.ui.component.PlayerSliderTrack
 import com.metrolist.music.ui.component.ResizableIconButton
 import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
+import com.metrolist.music.features.comments.TimedCommentsRepository
 import com.metrolist.music.features.comments.ui.TimedCommentsStrip
 import com.metrolist.music.features.canvas.ui.CanvasSearchDialog
 import com.metrolist.music.ui.component.rememberBottomSheetState
@@ -353,6 +354,22 @@ fun BottomSheetPlayer(
     val castPosition by castHandler?.castPosition?.collectAsStateWithLifecycle() ?: remember { mutableLongStateOf(0L) }
     val castDuration by castHandler?.castDuration?.collectAsStateWithLifecycle() ?: remember { mutableLongStateOf(0L) }
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
+
+    LaunchedEffect(mediaMetadata?.id) {
+        TimedCommentsRepository.clearAll()
+    }
+
+    LaunchedEffect(playbackState) {
+        if (playbackState == STATE_ENDED) {
+            TimedCommentsRepository.clearAll()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            TimedCommentsRepository.clearAll()
+        }
+    }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -1973,7 +1990,7 @@ fun BottomSheetPlayer(
                     TimedCommentsStrip(
                         videoId = mediaMetadata?.id,
                         positionMs = effectivePosition,
-                        enabled = state.isExpanded && showTimedComments,
+                        enabled = state.isExpanded && showTimedComments && playbackState != STATE_ENDED,
                         textColor = TextBackgroundColor,
                     )
 
