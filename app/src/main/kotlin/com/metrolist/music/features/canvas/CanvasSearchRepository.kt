@@ -26,17 +26,8 @@ object CanvasSearchRepository {
             CanvasSource.APPLE_MUSIC to suspend {
                 AppleMusicCanvasProvider.getBySongArtist(song, artist, album, storefront)
             },
-            CanvasSource.TIDAL to suspend {
-                TidalCanvasProvider.getBySongArtist(song, artist, album)
-            },
             CanvasSource.BETTER_LYRICS to suspend {
                 BetterLyricsCanvasProvider.getBySongArtist(song, artist, storefront)
-            },
-            CanvasSource.ARCHIVE_TUNE to suspend {
-                ArchiveTuneCanvasProvider.getBySongArtist(song, artist, album, storefront)
-            },
-            CanvasSource.VIVIMUSIC to suspend {
-                ViviMusicCanvasProvider.getBySongArtist(song, artist, album)
             },
         )
         coroutineScope {
