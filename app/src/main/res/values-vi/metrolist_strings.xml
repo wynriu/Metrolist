@@ -555,6 +555,9 @@
     <string name="monthly_most_playlist_name">Top Tháng</string>
     <string name="enable_song_cache">Bật bộ nhớ đệm bài hát</string>
     <string name="enable_song_cache_desc">Tự động lưu vào bộ nhớ đệm các bài hát để phát lại nhanh hơn trong tương lai</string>
+    <string name="canvas_cache">Bộ nhớ đệm Canvas</string>
+    <string name="clear_canvas_cache">Xóa bộ nhớ đệm Canvas</string>
+    <string name="clear_canvas_cache_dialog">Bạn có chắc chắn muốn xóa toàn bộ Canvas đã lưu trong bộ nhớ đệm không?</string>
     <string name="sleep_timer_stop_after_current_song_title">Dừng phát khi kết thúc bài hát hiện tại</string>
     <string name="wrapped_playlist_title">Nhìn lại %s của bạn</string>
     <string name="sort_ascending">Phân loại từ dưới lên trên</string>
