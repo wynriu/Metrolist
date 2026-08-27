@@ -272,7 +272,7 @@
     <!-- Additional Vietnamese translations -->
     <string name="color_palette">Bảng màu</string>
     <string name="pause">Tạm dừng</string>
-    <string name="theme_colors">Chủ đề & màu sắc</string>
+    <string name="theme_colors">Chủ đề &amp; màu sắc</string>
     <string name="theme_desc">Tùy chỉnh chủ đề ứng dụng</string>
     <string name="theme_mode">Chế độ chủ đề</string>
     <string name="use_system_colors">Sử dụng màu hệ thống</string>
