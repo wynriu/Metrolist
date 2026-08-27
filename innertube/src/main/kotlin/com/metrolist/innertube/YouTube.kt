@@ -3355,6 +3355,76 @@ object YouTube {
                 .extractYouTubeAccounts()
         }
 
+    data class FeaturedCommentsPage(
+        val comments: List<TimedComment>,
+        val continuation: String?,
+        val client: YouTubeClient,
+    )
+
+    /**
+     * Loads one page of highlighted/top user comments. The first call discovers the regular
+     * comments continuation, and later calls use the returned token directly so the caller can
+     * progressively fetch comments without waiting for the complete feed.
+     */
+    suspend fun featuredCommentsPage(
+        videoId: String,
+        continuation: String? = null,
+        client: YouTubeClient? = null,
+    ): Result<FeaturedCommentsPage> = runCatching {
+        if (continuation != null) {
+            var lastError: Throwable? = null
+            val clients = if (client != null) listOf(client) else listOf(WEB, WEB_REMIX)
+            for (activeClient in clients) {
+                try {
+                    val response =
+                        Json.parseToJsonElement(
+                            innerTube
+                                .next(activeClient, null, null, null, null, null, continuation)
+                                .bodyAsText(),
+                        ).asObject()
+                    return@runCatching FeaturedCommentsPage(
+                        comments = response.parseFeaturedComments(),
+                        continuation = response.findContinuationToken(),
+                        client = activeClient,
+                    )
+                } catch (error: Throwable) {
+                    if (error is kotlin.coroutines.cancellation.CancellationException) throw error
+                    lastError = error
+                }
+            }
+            throw (lastError ?: IllegalStateException("No comments continuation response"))
+        }
+
+        val clients = listOf(WEB, WEB_REMIX)
+        var fallbackPage: FeaturedCommentsPage? = null
+        var lastError: Throwable? = null
+        for (activeClient in clients) {
+            try {
+                val response =
+                    Json.parseToJsonElement(
+                        innerTube
+                            .next(activeClient, videoId, null, null, null, null, null)
+                            .bodyAsText(),
+                    ).asObject()
+                val page = FeaturedCommentsPage(
+                    comments = response.parseFeaturedComments(),
+                    continuation =
+                        response.findFeaturedCommentContinuationToken()
+                            ?: response.findCommentContinuationToken(),
+                    client = activeClient,
+                )
+                if (page.continuation != null || page.comments.isNotEmpty() || activeClient == WEB_REMIX) {
+                    return@runCatching page
+                }
+                fallbackPage = page
+            } catch (error: Throwable) {
+                if (error is kotlin.coroutines.cancellation.CancellationException) throw error
+                lastError = error
+            }
+        }
+        fallbackPage ?: throw (lastError ?: IllegalStateException("No comments response"))
+    }
+
     /**
      * Loads the available highlighted/top user comments from YouTube's regular comments feed.
      * YouTube's web comments panel uses a continuation for this feed; the parser follows that
