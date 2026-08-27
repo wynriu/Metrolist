@@ -90,6 +90,7 @@ import com.metrolist.music.constants.ShowMostStatsPlaylistsKey
 import com.metrolist.music.constants.ShowArtistSubscriberCountKey
 import com.metrolist.music.constants.ShowMonthlyListenersKey
 import com.metrolist.music.constants.ShowWrappedCardKey
+import com.metrolist.music.constants.ShowTimedCommentsKey
 import com.metrolist.music.constants.TopSize
 import com.metrolist.music.ui.component.EnumDialog
 import com.metrolist.music.ui.component.IconButton
@@ -134,6 +135,7 @@ fun ContentSettings(
     val (enableSimpMusic, onEnableSimpMusicChange) = rememberPreference(key = EnableSimpMusicKey, defaultValue = true)
     val (enableLyricsPlus, onEnableLyricsPlusChange) = rememberPreference(key = EnableLyricsPlus, defaultValue = true)
     val (enableCanvas, onEnableCanvasChange) = rememberPreference(key = CanvasThumbnailAnimationKey, defaultValue = true)
+    val (showTimedComments, onShowTimedCommentsChange) = rememberPreference(key = ShowTimedCommentsKey, defaultValue = false)
     val (canvasSource, onCanvasSourceChange) = rememberEnumPreference(key = CanvasSourceKey, defaultValue = CanvasSource.AUTO)
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,
@@ -1071,6 +1073,27 @@ fun ContentSettings(
                         )
                     },
                     onClick = { showCanvasSourceDialog = true }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.account),
+                    title = { Text(stringResource(R.string.show_timed_comments)) },
+                    description = { Text(stringResource(R.string.show_timed_comments_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = showTimedComments,
+                            onCheckedChange = onShowTimedCommentsChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (showTimedComments) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onShowTimedCommentsChange(!showTimedComments) }
                 )
             )
         )
