@@ -390,12 +390,9 @@
     <string name="enable_canvas_artwork">Bật ảnh Canvas</string>
     <string name="enable_canvas_artwork_desc">Hiển thị ảnh động trên bài hát hiện tại trong Player khi có sẵn</string>
     <string name="canvas_source">Nguồn Canvas</string>
-    <string name="canvas_source_auto">Tự động (Apple Music, Tidal, BetterLyrics, ArchiveTune, ViviMusic)</string>
+    <string name="canvas_source_auto">Tự động (Apple Music, BetterLyrics)</string>
     <string name="canvas_source_apple_music">Apple Music</string>
-    <string name="canvas_source_tidal">Tidal</string>
     <string name="canvas_source_better_lyrics">BetterLyrics</string>
-    <string name="canvas_source_archive_tune">ArchiveTune</string>
-    <string name="canvas_source_vivi_music">ViviMusic</string>
     <string name="find_canvas">Tìm Canvas</string>
     <string name="find_canvas_desc">Tìm và chọn Canvas động cho bài hát này</string>
     <string name="canvas_search_title">Tìm ảnh Canvas</string>
