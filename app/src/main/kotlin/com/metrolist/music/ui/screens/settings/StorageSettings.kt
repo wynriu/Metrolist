@@ -472,6 +472,7 @@ fun StorageSettings(
                 ),
         )
 
+    }
     TopAppBar(
         title = { Text(stringResource(R.string.storage)) },
         navigationIcon = {
