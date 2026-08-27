@@ -67,27 +67,11 @@ fun TimedCommentsStrip(
         activeComment = null
         if (!enabled || videoId.isNullOrBlank() || availableComments.isEmpty()) return@LaunchedEffect
 
-        fun nextRandomOrder(previousId: String?): List<TimedComment> {
-            val order = availableComments.shuffled()
-            if (order.size > 1 && order.first().id == previousId) {
-                return order.drop(1) + order.first()
-            }
-            return order
-        }
-
-        var order = nextRandomOrder(previousId = null)
         var index = 0
-        var previousId: String? = null
         while (isActive) {
-            val comment = order[index]
-            activeComment = comment
-            previousId = comment.id
+            activeComment = availableComments[index]
             delay(COMMENT_DISPLAY_INTERVAL_MS)
-            index++
-            if (index >= order.size) {
-                order = nextRandomOrder(previousId)
-                index = 0
-            }
+            index = (index + 1) % availableComments.size
         }
     }
 
