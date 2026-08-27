@@ -51,6 +51,7 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.EnableSongCacheKey
+import com.metrolist.music.constants.MaxCanvasCacheSizeKey
 import com.metrolist.music.constants.MaxImageCacheSizeKey
 import com.metrolist.music.constants.MaxSongCacheSizeKey
 import com.metrolist.music.features.canvas.CanvasMediaCache
@@ -94,6 +95,10 @@ fun StorageSettings(
         key = MaxSongCacheSizeKey,
         defaultValue = 1024
     )
+    val (maxCanvasCacheSize, onMaxCanvasCacheSizeChange) = rememberPreference(
+        key = MaxCanvasCacheSizeKey,
+        defaultValue = CanvasMediaCache.DEFAULT_MAX_CACHE_SIZE_MB,
+    )
     val (enableSongCache, onEnableSongCacheChange) = rememberPreference(
         key = EnableSongCacheKey,
         defaultValue = true
@@ -136,6 +141,18 @@ fun StorageSettings(
             ),
         label = "playerCacheProgress",
     )
+    val canvasCacheProgress by animateFloatAsState(
+        targetValue =
+            if (maxCanvasCacheSize <= 0) {
+                0f
+            } else {
+                (canvasCacheSize.toFloat() / (maxCanvasCacheSize * 1024 * 1024L)).coerceIn(
+                    0f,
+                    1f,
+                )
+            },
+        label = "canvasCacheProgress",
+    )
 
     LaunchedEffect(maxImageCacheSize) {
         SingletonImageLoader.reset()
@@ -173,6 +190,16 @@ fun StorageSettings(
             downloadCacheSize = tryOrNull { downloadCache.cacheSpace } ?: 0
         }
     }
+    LaunchedEffect(maxCanvasCacheSize) {
+        withContext(Dispatchers.IO) {
+            if (maxCanvasCacheSize <= 0) {
+                CanvasMediaCache.disable(context)
+            } else {
+                CanvasMediaCache.configure(context, maxCanvasCacheSize)
+            }
+        }
+    }
+
     LaunchedEffect(context) {
         while (isActive) {
             canvasCacheSize = withContext(Dispatchers.IO) { CanvasMediaCache.cacheSpace(context) }
@@ -506,9 +533,58 @@ fun StorageSettings(
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.cached),
-                    title = { Text(stringResource(R.string.canvas_cache)) },
+                    title = { Text(stringResource(R.string.max_canvas_cache_size)) },
                     description = {
-                        Text(text = Formatter.formatShortFileSize(context, canvasCacheSize))
+                        val canvasCacheValues = remember { listOf(0, 16, 32, 64, 128, 256) }
+                        val canvasCacheString = stringResource(R.string.canvas_cache).lowercase()
+                        Column {
+                            Text(
+                                text = when (maxCanvasCacheSize) {
+                                    0 -> stringResource(R.string.disable)
+                                    else -> Formatter.formatShortFileSize(
+                                        context,
+                                        maxCanvasCacheSize * 1024 * 1024L,
+                                    )
+                                },
+                            )
+                            Slider(
+                                value = canvasCacheValues.indexOf(maxCanvasCacheSize).coerceAtLeast(0).toFloat(),
+                                onValueChange = {
+                                    val newValue = canvasCacheValues[it.roundToInt()]
+                                    val newLimitInBytes = newValue * 1024 * 1024L
+
+                                    if (newLimitInBytes < canvasCacheSize) {
+                                        cacheUsage = canvasCacheSize
+                                        cacheType = canvasCacheString
+                                        onConfirmAction = { onMaxCanvasCacheSizeChange(newValue) }
+                                        showCacheWarningDialog = true
+                                    } else {
+                                        onMaxCanvasCacheSizeChange(newValue)
+                                    }
+                                },
+                                steps = canvasCacheValues.size - 2,
+                                valueRange = 0f..(canvasCacheValues.size - 1).toFloat(),
+                            )
+                            LinearProgressIndicator(
+                                progress = { canvasCacheProgress },
+                                modifier = Modifier.fillMaxWidth(),
+                                strokeCap = StrokeCap.Round,
+                            )
+                            Spacer(modifier = Modifier.padding(2.dp))
+                            Text(
+                                text = if (maxCanvasCacheSize == 0) {
+                                    stringResource(R.string.disable)
+                                } else {
+                                    "${Formatter.formatShortFileSize(context, canvasCacheSize)} / ${
+                                        Formatter.formatShortFileSize(
+                                            context,
+                                            maxCanvasCacheSize * 1024 * 1024L,
+                                        )
+                                    }"
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     },
                 ),
                 Material3SettingsItem(
