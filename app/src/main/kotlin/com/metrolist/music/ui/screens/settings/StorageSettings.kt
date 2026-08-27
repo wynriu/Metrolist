@@ -51,10 +51,8 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.EnableSongCacheKey
-import com.metrolist.music.constants.MaxCanvasCacheSizeKey
 import com.metrolist.music.constants.MaxImageCacheSizeKey
 import com.metrolist.music.constants.MaxSongCacheSizeKey
-import com.metrolist.music.features.canvas.CanvasMediaCache
 import com.metrolist.music.extensions.tryOrNull
 import com.metrolist.music.ui.component.ActionPromptDialog
 import com.metrolist.music.ui.component.IconButton
@@ -95,10 +93,6 @@ fun StorageSettings(
         key = MaxSongCacheSizeKey,
         defaultValue = 1024
     )
-    val (maxCanvasCacheSize, onMaxCanvasCacheSizeChange) = rememberPreference(
-        key = MaxCanvasCacheSizeKey,
-        defaultValue = CanvasMediaCache.DEFAULT_MAX_CACHE_SIZE_MB,
-    )
     val (enableSongCache, onEnableSongCacheChange) = rememberPreference(
         key = EnableSongCacheKey,
         defaultValue = true
@@ -107,8 +101,6 @@ fun StorageSettings(
     var clearDownloads by remember { mutableStateOf(false) }
     var clearCacheDialog by remember { mutableStateOf(false) }
     var clearImageCacheDialog by remember { mutableStateOf(false) }
-    var clearCanvasCacheDialog by remember { mutableStateOf(false) }
-
     // State for the confirmation dialog
     var showCacheWarningDialog by remember { mutableStateOf(false) }
     var cacheType by remember { mutableStateOf("") }
@@ -124,7 +116,6 @@ fun StorageSettings(
     var downloadCacheSize by remember {
         mutableLongStateOf(tryOrNull { downloadCache.cacheSpace } ?: 0)
     }
-    var canvasCacheSize by remember { mutableLongStateOf(0L) }
     val imageCacheProgress by animateFloatAsState(
         targetValue =
             (imageCacheSize.toFloat() / (maxImageCacheSize * 1024 * 1024L)).coerceIn(
@@ -141,19 +132,6 @@ fun StorageSettings(
             ),
         label = "playerCacheProgress",
     )
-    val canvasCacheProgress by animateFloatAsState(
-        targetValue =
-            if (maxCanvasCacheSize <= 0) {
-                if (canvasCacheSize > 0L) 1f else 0f
-            } else {
-                (canvasCacheSize.toFloat() / (maxCanvasCacheSize * 1024 * 1024L)).coerceIn(
-                    0f,
-                    1f,
-                )
-            },
-        label = "canvasCacheProgress",
-    )
-
     LaunchedEffect(maxImageCacheSize) {
         SingletonImageLoader.reset()
         if (maxImageCacheSize == 0) {
@@ -190,23 +168,6 @@ fun StorageSettings(
             downloadCacheSize = tryOrNull { downloadCache.cacheSpace } ?: 0
         }
     }
-    LaunchedEffect(maxCanvasCacheSize) {
-        withContext(Dispatchers.IO) {
-            if (maxCanvasCacheSize <= 0) {
-                CanvasMediaCache.disable(context)
-            } else {
-                CanvasMediaCache.configure(context, maxCanvasCacheSize)
-            }
-        }
-    }
-
-    LaunchedEffect(context) {
-        while (isActive) {
-            canvasCacheSize = withContext(Dispatchers.IO) { CanvasMediaCache.cacheSpace(context) }
-            delay(500)
-        }
-    }
-
     if (clearDownloads) {
         ActionPromptDialog(
             title = stringResource(R.string.clear_all_downloads),
@@ -278,23 +239,6 @@ fun StorageSettings(
             onCancel = { clearImageCacheDialog = false },
             content = {
                 Text(text = stringResource(R.string.clear_image_cache_dialog))
-            },
-        )
-    }
-
-    if (clearCanvasCacheDialog) {
-        ActionPromptDialog(
-            title = stringResource(R.string.clear_canvas_cache),
-            onDismiss = { clearCanvasCacheDialog = false },
-            onConfirm = {
-                coroutineScope.launch(Dispatchers.IO) {
-                    CanvasMediaCache.clear(context)
-                }
-                clearCanvasCacheDialog = false
-            },
-            onCancel = { clearCanvasCacheDialog = false },
-            content = {
-                Text(text = stringResource(R.string.clear_canvas_cache_dialog))
             },
         )
     }
@@ -527,74 +471,6 @@ fun StorageSettings(
                     ),
                 ),
         )
-
-        Material3SettingsGroup(
-            title = stringResource(R.string.canvas_cache),
-            items = listOf(
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.cached),
-                    title = { Text(stringResource(R.string.max_canvas_cache_size)) },
-                    description = {
-                        val canvasCacheValues = remember { listOf(0, 16, 32, 64, 128, 256) }
-                        val canvasCacheString = stringResource(R.string.canvas_cache).lowercase()
-                        Column {
-                            Text(
-                                text = when (maxCanvasCacheSize) {
-                                    0 -> stringResource(R.string.disable)
-                                    else -> Formatter.formatShortFileSize(
-                                        context,
-                                        maxCanvasCacheSize * 1024 * 1024L,
-                                    )
-                                },
-                            )
-                            Slider(
-                                value = canvasCacheValues.indexOf(maxCanvasCacheSize).coerceAtLeast(0).toFloat(),
-                                onValueChange = {
-                                    val newValue = canvasCacheValues[it.roundToInt()]
-                                    val newLimitInBytes = newValue * 1024 * 1024L
-
-                                    if (newLimitInBytes < canvasCacheSize) {
-                                        cacheUsage = canvasCacheSize
-                                        cacheType = canvasCacheString
-                                        onConfirmAction = { onMaxCanvasCacheSizeChange(newValue) }
-                                        showCacheWarningDialog = true
-                                    } else {
-                                        onMaxCanvasCacheSizeChange(newValue)
-                                    }
-                                },
-                                steps = canvasCacheValues.size - 2,
-                                valueRange = 0f..(canvasCacheValues.size - 1).toFloat(),
-                            )
-                            LinearProgressIndicator(
-                                progress = { canvasCacheProgress },
-                                modifier = Modifier.fillMaxWidth(),
-                                strokeCap = StrokeCap.Round,
-                            )
-                            Spacer(modifier = Modifier.padding(2.dp))
-                            Text(
-                                text = if (maxCanvasCacheSize == 0) {
-                                    "${Formatter.formatShortFileSize(context, canvasCacheSize)} / ${stringResource(R.string.disable)}"
-                                } else {
-                                    "${Formatter.formatShortFileSize(context, canvasCacheSize)} / ${
-                                        Formatter.formatShortFileSize(
-                                            context,
-                                            maxCanvasCacheSize * 1024 * 1024L,
-                                        )
-                                    }"
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    },
-                ),
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.clear_all),
-                    title = { Text(stringResource(R.string.clear_canvas_cache)) },
-                    onClick = { clearCanvasCacheDialog = true },
-                ),
-            ),
-        )
-    }
 
     TopAppBar(
         title = { Text(stringResource(R.string.storage)) },
