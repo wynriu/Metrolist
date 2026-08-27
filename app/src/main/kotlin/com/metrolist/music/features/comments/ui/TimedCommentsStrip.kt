@@ -36,10 +36,14 @@ import coil3.compose.AsyncImage
 import com.metrolist.music.R
 import com.metrolist.music.features.comments.TimedCommentsRepository
 import com.metrolist.innertube.models.TimedComment
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 private const val COMMENT_DISPLAY_INTERVAL_MS = 5_000L
+private const val LOAD_TRIGGER_INDEX = 4
+private const val LOAD_TRIGGER_STEP = 10
 
 @Composable
 fun TimedCommentsStrip(
@@ -49,29 +53,60 @@ fun TimedCommentsStrip(
     textColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier,
 ) {
-    var comments by remember(videoId) { mutableStateOf<List<TimedComment>>(emptyList()) }
     var activeComment by remember(videoId) { mutableStateOf<TimedComment?>(null) }
 
     LaunchedEffect(enabled, videoId) {
-        comments = emptyList()
         activeComment = null
         if (!enabled || videoId.isNullOrBlank()) return@LaunchedEffect
-        comments = TimedCommentsRepository.get(videoId).distinctBy { it.id }
-    }
 
-    val availableComments = remember(comments) {
-        comments.filter { it.text.isNotBlank() }
-    }
+        var loaded = TimedCommentsRepository.loadNextWindow(videoId, reset = true)
+        var comments = loaded.comments
+        var hasMore = loaded.hasMore
+        var displayIndex = 0
+        var requestedThreshold = -1
+        var nextWindowJob: Job? = null
 
-    LaunchedEffect(enabled, videoId, availableComments) {
-        activeComment = null
-        if (!enabled || videoId.isNullOrBlank() || availableComments.isEmpty()) return@LaunchedEffect
-
-        var index = 0
         while (isActive) {
-            activeComment = availableComments[index]
+            if (comments.isEmpty()) {
+                if (!hasMore) break
+                delay(1_000L)
+                loaded = TimedCommentsRepository.loadNextWindow(videoId)
+                comments = loaded.comments
+                hasMore = loaded.hasMore
+                continue
+            }
+
+            if (displayIndex >= comments.size) displayIndex = 0
+            activeComment = comments[displayIndex]
+
+            val shouldLoadNextWindow =
+                displayIndex >= LOAD_TRIGGER_INDEX &&
+                    (displayIndex - LOAD_TRIGGER_INDEX) % LOAD_TRIGGER_STEP == 0 &&
+                    requestedThreshold != displayIndex &&
+                    hasMore
+            if (shouldLoadNextWindow && nextWindowJob?.isActive != true) {
+                val threshold = displayIndex
+                val previousCount = comments.size
+                nextWindowJob = launch {
+                    val next = TimedCommentsRepository.loadNextWindow(videoId)
+                    if (isActive) {
+                        loaded = next
+                        comments = next.comments
+                        hasMore = next.hasMore
+                        if (next.comments.size > previousCount || !next.hasMore) {
+                            requestedThreshold = threshold
+                        }
+                    }
+                }
+            }
+
             delay(COMMENT_DISPLAY_INTERVAL_MS)
-            index = (index + 1) % availableComments.size
+            displayIndex =
+                if (displayIndex + 1 < comments.size) {
+                    displayIndex + 1
+                } else {
+                    0
+                }
         }
     }
 
