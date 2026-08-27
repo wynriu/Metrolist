@@ -1,14 +1,12 @@
 package com.metrolist.music.features.canvas.ui
 
 import com.metrolist.music.features.canvas.AppleMusicCanvasProvider
-import com.metrolist.music.features.canvas.ArchiveTuneCanvasProvider
 import com.metrolist.music.features.canvas.BetterLyricsCanvasProvider
 import com.metrolist.music.features.canvas.CanvasArtwork
 import com.metrolist.music.features.canvas.CanvasArtworkSelectionStore
 import com.metrolist.music.constants.CanvasSource
 import com.metrolist.music.constants.MaxCanvasCacheSizeKey
 import com.metrolist.music.features.canvas.CanvasMediaCache
-import com.metrolist.music.features.canvas.TidalCanvasProvider
 
 import android.view.TextureView
 import android.view.ViewGroup
@@ -181,25 +179,12 @@ fun CanvasArtworkOverlay(
                 CanvasSource.AUTO ->
                     AppleMusicCanvasProvider.getBySongArtist(title, artist, album, storefront)
                         ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                        ?: TidalCanvasProvider.getBySongArtist(title, artist, album)
-                            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
                         ?: BetterLyricsCanvasProvider.getBySongArtist(title, artist, storefront)
-                            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                        ?: ArchiveTuneCanvasProvider.getBySongArtist(title, artist, album, storefront)
-                            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                        ?: com.metrolist.music.features.canvas.ViviMusicCanvasProvider
-                            .getBySongArtist(title, artist, album)
                             ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
                 CanvasSource.APPLE_MUSIC ->
                     AppleMusicCanvasProvider.getBySongArtist(title, artist, album, storefront)
-                CanvasSource.TIDAL ->
-                    TidalCanvasProvider.getBySongArtist(title, artist, album)
                 CanvasSource.BETTER_LYRICS ->
                     BetterLyricsCanvasProvider.getBySongArtist(title, artist, storefront)
-                CanvasSource.ARCHIVE_TUNE ->
-                    ArchiveTuneCanvasProvider.getBySongArtist(title, artist, album, storefront)
-                CanvasSource.VIVIMUSIC ->
-                    com.metrolist.music.features.canvas.ViviMusicCanvasProvider.getBySongArtist(title, artist, album)
             }
         }
         if (fetched != null) {

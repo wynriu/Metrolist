@@ -269,8 +269,5 @@ private fun CanvasSearchResultCard(
 private fun sourceLabel(source: CanvasSource): String = when (source) {
     CanvasSource.AUTO -> androidx.compose.ui.res.stringResource(R.string.canvas_source_auto)
     CanvasSource.APPLE_MUSIC -> androidx.compose.ui.res.stringResource(R.string.canvas_source_apple_music)
-    CanvasSource.TIDAL -> androidx.compose.ui.res.stringResource(R.string.canvas_source_tidal)
     CanvasSource.BETTER_LYRICS -> androidx.compose.ui.res.stringResource(R.string.canvas_source_better_lyrics)
-    CanvasSource.ARCHIVE_TUNE -> androidx.compose.ui.res.stringResource(R.string.canvas_source_archive_tune)
-    CanvasSource.VIVIMUSIC -> androidx.compose.ui.res.stringResource(R.string.canvas_source_vivi_music)
 }
