@@ -394,6 +394,8 @@
     <string name="canvas_source_apple_music">Apple Music</string>
     <string name="canvas_source_tidal">Tidal</string>
     <string name="canvas_source_better_lyrics">BetterLyrics</string>
+    <string name="show_timed_comments">Hiển thị bình luận theo mốc thời gian</string>
+    <string name="show_timed_comments_desc">Hiển thị bình luận của người dùng tại mốc thời gian bên dưới ảnh bìa</string>
     <string name="prevent_duplicate_tracks_in_queue">Tránh lặp lại bài hát trong hàng</string>
     <string name="prevent_duplicate_tracks_in_queue_desc">Khi thêm một bài hát đã có sẵn trong hàng chờ, bài hát đó sẽ được chuyển từ vị trí cũ sang vị trí mới thay vì được thêm vào lần nữa</string>
     <string name="lyrics_provider_priority">Ưu tiên nhà cung cấp lời bài hát</string>
