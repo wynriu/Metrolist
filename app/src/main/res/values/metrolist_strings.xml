@@ -175,10 +175,6 @@
     <string name="show_cached_playlist">Show Cached playlist</string>
     <string name="enable_song_cache">Enable song cache</string>
     <string name="enable_song_cache_desc">Automatically cache songs for faster future playback</string>
-    <string name="canvas_cache">Canvas cache</string>
-    <string name="max_canvas_cache_size">Maximum Canvas cache size</string>
-    <string name="clear_canvas_cache">Clear Canvas cache</string>
-    <string name="clear_canvas_cache_dialog">Are you sure you want to clear all cached Canvas artwork?</string>
     <string name="show_uploaded_playlist">Show Uploaded playlist</string>
     <string name="show_most_stats_playlists">Show Weekly and Monthly Most playlists</string>
     <string name="show_most_stats_playlists_desc">Create and show stats-based Most playlists in Stats and Library</string>
