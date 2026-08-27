@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /** Canvas provider backed by BetterLyrics' artwork API. */
 object BetterLyricsCanvasProvider {
-    private const val ARTWORK_URL = "https://artwork.boidu.dev/artwork"
+    private const val ARTWORK_URL = "https://artwork.boidu.dev/"
     private const val CACHE_TTL_MS = 60_000L
 
     private val json = Json {
