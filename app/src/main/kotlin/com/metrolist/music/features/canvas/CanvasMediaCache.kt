@@ -9,9 +9,11 @@ import android.content.Context
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.Cache
+import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheEvictor
 import androidx.media3.datasource.cache.CacheSpan
+import androidx.media3.datasource.cache.NoOpCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.OkHttpClient
@@ -105,7 +107,7 @@ object CanvasMediaCache {
         val playbackCache = synchronized(lock) {
             temporaryCache ?: SimpleCache(
                 temporaryCacheDirectory(context),
-                DynamicLruCacheEvictor(Long.MAX_VALUE),
+                NoOpCacheEvictor(),
                 StandaloneDatabaseProvider(context),
             ).also { temporaryCache = it }
         }
@@ -113,6 +115,7 @@ object CanvasMediaCache {
         return CacheDataSource.Factory()
             .setCache(playbackCache)
             .setUpstreamDataSourceFactory(upstreamDataSourceFactory())
+            .setCacheWriteDataSinkFactory(CacheDataSink.Factory().setCache(playbackCache))
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
