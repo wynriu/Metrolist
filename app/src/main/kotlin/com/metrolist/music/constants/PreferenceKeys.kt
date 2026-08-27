@@ -83,10 +83,7 @@ enum class SliderStyle {
 enum class CanvasSource {
     AUTO,
     APPLE_MUSIC,
-    TIDAL,
     BETTER_LYRICS,
-    ARCHIVE_TUNE,
-    VIVIMUSIC,
 }
 
 const val SYSTEM_DEFAULT = "SYSTEM_DEFAULT"
