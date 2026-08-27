@@ -1,6 +1,8 @@
 package com.metrolist.music.features.comments.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -113,7 +115,13 @@ fun TimedCommentsStrip(
 
     if (!enabled) return
 
-    Row(
+    AnimatedVisibility(
+        visible = activeComment != null,
+        enter = expandVertically(expandFrom = Alignment.Top) + slideInVertically(initialOffsetY = { -it / 4 }) + fadeIn(),
+        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
         modifier = modifier
             .fillMaxWidth()
             .height(50.dp)
@@ -154,6 +162,7 @@ fun TimedCommentsStrip(
                     )
                 }
             }
+        }
         }
     }
 }
