@@ -3520,7 +3520,39 @@ object YouTube {
                 ?.objectValue("twoColumnWatchNextResults")
                 ?.objectValue("results")
                 ?.objectValue("results")
-        standardRoot?.findContinuationTokens()?.firstOrNull()?.let { return it }
+
+        // Match ViviMusic's proven WEB comments flow first. The direct continuation is the
+        // comment-item-section token and avoids accidentally selecting a related-video token.
+        val standardContent =
+            listOfNotNull(
+                standardRoot?.arrayValue("contents"),
+                standardRoot?.arrayValue("content"),
+            ).asSequence()
+                .flatMap { it.asSequence() }
+                .mapNotNull { it as? JsonObject }
+
+        standardContent
+            .mapNotNull { it.objectValue("continuationItemRenderer")?.continuationToken() }
+            .firstOrNull()
+            ?.let { return it }
+
+        standardContent
+            .mapNotNull { it.objectValue("itemSectionRenderer") }
+            .flatMap { section -> section.arrayValue("contents").orEmpty().asSequence() }
+            .mapNotNull { it as? JsonObject }
+            .mapNotNull { it.objectValue("continuationItemRenderer")?.continuationToken() }
+            .firstOrNull()
+            ?.let { return it }
+
+        // Some video responses wrap the comments section in a named renderer instead of the
+        // usual itemSectionRenderer. Search only those comment-related branches before falling
+        // back to the broader response scan.
+        standardRoot
+            ?.findObjectValues("commentItemSectionRenderer")
+            ?.asSequence()
+            ?.flatMap { it.findContinuationTokens().asSequence() }
+            ?.firstOrNull()
+            ?.let { return it }
 
         val engagementRoot =
             arrayValue("engagementPanels")
