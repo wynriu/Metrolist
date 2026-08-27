@@ -370,10 +370,7 @@ fun ContentSettings(
                 when (it) {
                     CanvasSource.AUTO -> stringResource(R.string.canvas_source_auto)
                     CanvasSource.APPLE_MUSIC -> stringResource(R.string.canvas_source_apple_music)
-                    CanvasSource.TIDAL -> stringResource(R.string.canvas_source_tidal)
                     CanvasSource.BETTER_LYRICS -> stringResource(R.string.canvas_source_better_lyrics)
-                    CanvasSource.ARCHIVE_TUNE -> stringResource(R.string.canvas_source_archive_tune)
-                    CanvasSource.VIVIMUSIC -> stringResource(R.string.canvas_source_vivi_music)
                 }
             }
         )
@@ -1069,10 +1066,7 @@ fun ContentSettings(
                             when (canvasSource) {
                                 CanvasSource.AUTO -> stringResource(R.string.canvas_source_auto)
                                 CanvasSource.APPLE_MUSIC -> stringResource(R.string.canvas_source_apple_music)
-                                CanvasSource.TIDAL -> stringResource(R.string.canvas_source_tidal)
                                 CanvasSource.BETTER_LYRICS -> stringResource(R.string.canvas_source_better_lyrics)
-                                CanvasSource.ARCHIVE_TUNE -> stringResource(R.string.canvas_source_archive_tune)
-                                CanvasSource.VIVIMUSIC -> stringResource(R.string.canvas_source_vivi_music)
                             }
                         )
                     },
