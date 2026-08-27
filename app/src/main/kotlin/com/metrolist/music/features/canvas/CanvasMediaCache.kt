@@ -120,7 +120,7 @@ object CanvasMediaCache {
     }
 
     fun cacheSpace(context: Context): Long = synchronized(lock) {
-        cache?.cacheSpace ?: 0L
+        (cache?.cacheSpace ?: 0L) + (temporaryCache?.cacheSpace ?: 0L)
     }
 
     fun clear(context: Context) {
