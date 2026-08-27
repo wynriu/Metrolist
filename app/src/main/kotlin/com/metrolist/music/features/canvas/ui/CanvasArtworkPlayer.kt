@@ -1,8 +1,10 @@
 package com.metrolist.music.features.canvas.ui
 
 import com.metrolist.music.features.canvas.AppleMusicCanvasProvider
+import com.metrolist.music.features.canvas.ArchiveTuneCanvasProvider
 import com.metrolist.music.features.canvas.BetterLyricsCanvasProvider
 import com.metrolist.music.features.canvas.CanvasArtwork
+import com.metrolist.music.features.canvas.CanvasArtworkSelectionStore
 import com.metrolist.music.constants.CanvasSource
 import com.metrolist.music.constants.MaxCanvasCacheSizeKey
 import com.metrolist.music.features.canvas.CanvasMediaCache
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -140,6 +143,7 @@ fun CanvasArtworkOverlay(
     title: String,
     artist: String,
     album: String,
+    mediaId: String? = null,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -153,12 +157,20 @@ fun CanvasArtworkOverlay(
         com.metrolist.music.constants.CanvasSourceKey,
         defaultValue = com.metrolist.music.constants.CanvasSource.AUTO,
     )
-    var artwork by remember(title, artist, album, source) { mutableStateOf<CanvasArtwork?>(null) }
+    var artwork by remember(title, artist, album, mediaId, source) { mutableStateOf<CanvasArtwork?>(null) }
+    val selectionVersion by CanvasArtworkSelectionStore.changes.collectAsState()
+    val manuallySelectedArtwork = remember(mediaId, selectionVersion) {
+        mediaId?.let { CanvasArtworkSelectionStore.get(it) }
+    }
     val storefront = remember {
         java.util.Locale.getDefault().country.takeIf { it.length == 2 }?.lowercase(java.util.Locale.ROOT) ?: "us"
     }
 
-    LaunchedEffect(title, artist, album, source) {
+    LaunchedEffect(title, artist, album, mediaId, source, manuallySelectedArtwork) {
+        if (manuallySelectedArtwork != null) {
+            artwork = manuallySelectedArtwork
+            return@LaunchedEffect
+        }
         val key = listOf(source.name, title, artist, album, storefront).joinToString("|") { it.trim().lowercase(java.util.Locale.ROOT) }
         CanvasArtworkCache.get(key)?.let {
             artwork = it
@@ -173,12 +185,21 @@ fun CanvasArtworkOverlay(
                             ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
                         ?: BetterLyricsCanvasProvider.getBySongArtist(title, artist, storefront)
                             ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                        ?: ArchiveTuneCanvasProvider.getBySongArtist(title, artist, album, storefront)
+                            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                        ?: com.metrolist.music.features.canvas.ViviMusicCanvasProvider
+                            .getBySongArtist(title, artist, album)
+                            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
                 CanvasSource.APPLE_MUSIC ->
                     AppleMusicCanvasProvider.getBySongArtist(title, artist, album, storefront)
                 CanvasSource.TIDAL ->
                     TidalCanvasProvider.getBySongArtist(title, artist, album)
                 CanvasSource.BETTER_LYRICS ->
                     BetterLyricsCanvasProvider.getBySongArtist(title, artist, storefront)
+                CanvasSource.ARCHIVE_TUNE ->
+                    ArchiveTuneCanvasProvider.getBySongArtist(title, artist, album, storefront)
+                CanvasSource.VIVIMUSIC ->
+                    com.metrolist.music.features.canvas.ViviMusicCanvasProvider.getBySongArtist(title, artist, album)
             }
         }
         if (fetched != null) {
