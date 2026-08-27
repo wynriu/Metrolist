@@ -5,8 +5,6 @@ import com.metrolist.music.features.canvas.BetterLyricsCanvasProvider
 import com.metrolist.music.features.canvas.CanvasArtwork
 import com.metrolist.music.features.canvas.CanvasArtworkSelectionStore
 import com.metrolist.music.constants.CanvasSource
-import com.metrolist.music.constants.MaxCanvasCacheSizeKey
-import com.metrolist.music.features.canvas.CanvasMediaCache
 
 import android.view.TextureView
 import android.view.ViewGroup
@@ -43,18 +41,14 @@ fun CanvasArtworkPlayer(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val maxCanvasCacheSize by com.metrolist.music.utils.rememberPreference(
-        MaxCanvasCacheSizeKey,
-        defaultValue = CanvasMediaCache.DEFAULT_MAX_CACHE_SIZE_MB,
-    )
     val primary = primaryUrl?.takeIf(String::isNotBlank)
     val fallback = fallbackUrl?.takeIf(String::isNotBlank)
     val initialUrl = primary ?: fallback ?: return
     var currentUrl by remember(initialUrl) { mutableStateOf(initialUrl) }
     var ready by remember(initialUrl) { mutableStateOf(false) }
 
-    val dataSourceFactory = remember(context, maxCanvasCacheSize) {
-        CanvasMediaCache.dataSourceFactory(context, maxCanvasCacheSize)
+    val dataSourceFactory = remember(context) {
+        androidx.media3.datasource.DefaultDataSource.Factory(context)
     }
     val player = remember(initialUrl, dataSourceFactory) {
         ExoPlayer.Builder(context)
