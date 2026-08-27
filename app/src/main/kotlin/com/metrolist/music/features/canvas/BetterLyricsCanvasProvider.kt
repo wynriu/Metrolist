@@ -85,7 +85,7 @@ object BetterLyricsCanvasProvider {
             } else {
                 response.body<BetterLyricsArtwork>()
                     .toCanvasArtwork()
-                    ?.takeIf { it.matchesSongIdentity(song, artist) }
+                    ?.takeIf { it.matchesBetterLyricsIdentity(song, artist) }
             }
         } catch (error: CancellationException) {
             throw error
@@ -96,6 +96,10 @@ object BetterLyricsCanvasProvider {
         cache[key] = CacheEntry(value, System.currentTimeMillis() + CACHE_TTL_MS)
         return value
     }
+
+    private fun CanvasArtwork.matchesBetterLyricsIdentity(song: String, artist: String): Boolean =
+        name?.normalizeForCanvasComparison() == song.normalizeForCanvasComparison() &&
+            this.artist?.normalizeForCanvasComparison() == artist.normalizeForCanvasComparison()
 
     private fun BetterLyricsArtwork.toCanvasArtwork(): CanvasArtwork? {
         val mainAnimated = animated ?: videoUrl
