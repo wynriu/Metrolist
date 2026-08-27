@@ -2,6 +2,7 @@ package com.metrolist.music.features.canvas.ui
 
 import com.metrolist.music.features.canvas.AppleMusicCanvasProvider
 import com.metrolist.music.features.canvas.CanvasArtwork
+import com.metrolist.music.features.canvas.CanvasMediaCache
 import com.metrolist.music.features.canvas.TidalCanvasProvider
 import com.metrolist.music.features.canvas.ViviMusicCanvasProvider
 
@@ -27,11 +28,8 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import okhttp3.OkHttpClient
 import java.util.Locale
 
 @Composable
@@ -48,12 +46,8 @@ fun CanvasArtworkPlayer(
     var currentUrl by remember(initialUrl) { mutableStateOf(initialUrl) }
     var ready by remember(initialUrl) { mutableStateOf(false) }
 
-    val dataSourceFactory = remember {
-        DefaultDataSource.Factory(
-            context,
-            OkHttpDataSource.Factory(OkHttpClient())
-                .setUserAgent("Metrolist/Canvas")
-        )
+    val dataSourceFactory = remember(context) {
+        CanvasMediaCache.dataSourceFactory(context)
     }
     val player = remember(initialUrl, dataSourceFactory) {
         ExoPlayer.Builder(context)
