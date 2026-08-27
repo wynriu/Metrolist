@@ -8,48 +8,167 @@ package com.metrolist.music.features.canvas
 import android.content.Context
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
-import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.CacheEvictor
+import androidx.media3.datasource.cache.CacheSpan
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.OkHttpClient
 import java.io.File
+import java.util.TreeSet
 
 /** Persistent on-disk cache for Canvas HLS manifests, segments, and MP4 media. */
 object CanvasMediaCache {
+    const val DEFAULT_MAX_CACHE_SIZE_MB = 256
+
     private const val DIRECTORY_NAME = "canvas"
-    private const val MAX_CACHE_BYTES = 256L * 1024L * 1024L
 
     private val lock = Any()
+    private val httpClient by lazy(::OkHttpClient)
 
     @Volatile
     private var cache: SimpleCache? = null
 
-    private fun cacheFor(context: Context): SimpleCache =
-        cache ?: synchronized(lock) {
-            cache ?: SimpleCache(
-                File(context.filesDir, DIRECTORY_NAME),
-                LeastRecentlyUsedCacheEvictor(MAX_CACHE_BYTES),
+    @Volatile
+    private var configuredSizeMb: Int? = null
+
+    @Volatile
+    private var evictor: DynamicLruCacheEvictor? = null
+
+    private fun cacheDirectory(context: Context): File =
+        File(context.filesDir, DIRECTORY_NAME)
+
+    private fun upstreamDataSourceFactory(): DataSource.Factory =
+        OkHttpDataSource.Factory(httpClient)
+            .setUserAgent("Metrolist/Canvas")
+
+    /**
+     * Applies a new cache size without replacing an open SimpleCache. A value of
+     * zero disables the cache and removes all previously cached Canvas media.
+     */
+    fun configure(context: Context, maxSizeMb: Int) {
+        require(maxSizeMb > 0) { "Canvas cache must be disabled through disable()" }
+        synchronized(lock) {
+            cache?.let { existingCache ->
+                if (configuredSizeMb != maxSizeMb) {
+                    evictor?.setMaxBytes(maxSizeMb * 1024L * 1024L, existingCache)
+                    configuredSizeMb = maxSizeMb
+                }
+                return
+            }
+
+            val newEvictor = DynamicLruCacheEvictor(maxSizeMb * 1024L * 1024L)
+            cache = SimpleCache(
+                cacheDirectory(context),
+                newEvictor,
                 StandaloneDatabaseProvider(context),
-            ).also { cache = it }
+            )
+            evictor = newEvictor
+            configuredSizeMb = maxSizeMb
+        }
+    }
+
+    fun dataSourceFactory(
+        context: Context,
+        maxSizeMb: Int = DEFAULT_MAX_CACHE_SIZE_MB,
+    ): DataSource.Factory {
+        if (maxSizeMb <= 0) {
+            disable(context)
+            return upstreamDataSourceFactory()
         }
 
-    fun dataSourceFactory(context: Context): DataSource.Factory {
-        val upstream =
-            OkHttpDataSource.Factory(OkHttpClient())
-                .setUserAgent("Metrolist/Canvas")
+        configure(context, maxSizeMb)
+        val canvasCache = synchronized(lock) { cache }
+            ?: return upstreamDataSourceFactory()
+
         return CacheDataSource.Factory()
-            .setCache(cacheFor(context))
-            .setUpstreamDataSourceFactory(upstream)
+            .setCache(canvasCache)
+            .setUpstreamDataSourceFactory(upstreamDataSourceFactory())
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
-    fun cacheSpace(context: Context): Long = cacheFor(context).cacheSpace
+    fun cacheSpace(context: Context): Long = synchronized(lock) {
+        cache?.cacheSpace ?: 0L
+    }
 
     fun clear(context: Context) {
-        val canvasCache = cacheFor(context)
         synchronized(lock) {
-            canvasCache.keys.forEach(canvasCache::removeResource)
+            cache?.let(::clearLocked) ?: cacheDirectory(context).deleteRecursively()
+        }
+    }
+
+    /** Disables Canvas caching and removes every cached Canvas resource. */
+    fun disable(context: Context) {
+        synchronized(lock) {
+            disableLocked(context)
+        }
+    }
+
+    private fun disableLocked(context: Context) {
+        cache?.let {
+            clearLocked(it)
+            it.release()
+        }
+        cache = null
+        evictor = null
+        configuredSizeMb = null
+        cacheDirectory(context).deleteRecursively()
+    }
+
+    private fun clearLocked(canvasCache: SimpleCache) {
+        canvasCache.keys.toList().forEach(canvasCache::removeResource)
+    }
+
+    private class DynamicLruCacheEvictor(
+        initialMaxBytes: Long,
+    ) : CacheEvictor {
+        private var maxBytes = initialMaxBytes
+        private var currentSize = 0L
+        private val leastRecentlyUsed =
+            TreeSet<CacheSpan> { first, second ->
+                val timestampComparison = first.lastTouchTimestamp.compareTo(second.lastTouchTimestamp)
+                if (timestampComparison != 0) timestampComparison else first.compareTo(second)
+            }
+
+        override fun requiresCacheSpanTouches(): Boolean = true
+
+        override fun onCacheInitialized() = Unit
+
+        @Synchronized
+        override fun onStartFile(cache: Cache, key: String, position: Long, length: Long) {
+            if (length != -1L) evictCache(cache, length)
+        }
+
+        @Synchronized
+        override fun onSpanAdded(cache: Cache, span: CacheSpan) {
+            leastRecentlyUsed.add(span)
+            currentSize += span.length
+            evictCache(cache, 0L)
+        }
+
+        @Synchronized
+        override fun onSpanRemoved(cache: Cache, span: CacheSpan) {
+            leastRecentlyUsed.remove(span)
+            currentSize -= span.length
+        }
+
+        @Synchronized
+        override fun onSpanTouched(cache: Cache, oldSpan: CacheSpan, newSpan: CacheSpan) {
+            onSpanRemoved(cache, oldSpan)
+            onSpanAdded(cache, newSpan)
+        }
+
+        @Synchronized
+        fun setMaxBytes(newMaxBytes: Long, cache: Cache) {
+            maxBytes = newMaxBytes
+            evictCache(cache, 0L)
+        }
+
+        private fun evictCache(cache: Cache, incomingLength: Long) {
+            while (currentSize + incomingLength > maxBytes && leastRecentlyUsed.isNotEmpty()) {
+                cache.removeSpan(leastRecentlyUsed.first())
+            }
         }
     }
 }
