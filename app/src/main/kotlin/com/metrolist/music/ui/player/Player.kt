@@ -174,6 +174,7 @@ import com.metrolist.music.ui.component.ResizableIconButton
 import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
 import com.metrolist.music.features.comments.ui.TimedCommentsStrip
+import com.metrolist.music.features.canvas.ui.CanvasSearchDialog
 import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
@@ -233,6 +234,9 @@ fun BottomSheetPlayer(
     }
 
     var isFullScreen by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var showCanvasSearchDialog by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -629,6 +633,17 @@ fun BottomSheetPlayer(
     val sleepTimerStopAfterCurrentSong by rememberPreference(SleepTimerStopAfterCurrentSongKey, false)
     val sleepTimerFadeOut by rememberPreference(SleepTimerFadeOutKey, false)
 
+    if (showCanvasSearchDialog) {
+        mediaMetadata?.let { metadata ->
+            CanvasSearchDialog(
+                mediaId = metadata.id,
+                initialSong = metadata.title,
+                initialArtist = metadata.artists.joinToString { it.name },
+                initialAlbum = metadata.album?.title.orEmpty(),
+                onDismiss = { showCanvasSearchDialog = false },
+            )
+        }
+    }
 
     if (showSleepTimerDialog) {
         AlertDialog(
@@ -1886,6 +1901,7 @@ fun BottomSheetPlayer(
                                     isPlayerExpanded = isExpandedProvider,
                                     isLandscape = true,
                                     isListenTogetherGuest = isListenTogetherGuest,
+                                    onLongPressCanvas = { showCanvasSearchDialog = true },
                                 )
                             }
                         }
@@ -1948,6 +1964,7 @@ fun BottomSheetPlayer(
                                     modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
                                     isPlayerExpanded = isExpandedProvider,
                                     isListenTogetherGuest = isListenTogetherGuest,
+                                    onLongPressCanvas = { showCanvasSearchDialog = true },
                                 )
                             }
                         }
@@ -1956,7 +1973,7 @@ fun BottomSheetPlayer(
                     TimedCommentsStrip(
                         videoId = mediaMetadata?.id,
                         positionMs = effectivePosition,
-                        enabled = state.isExpanded && showTimedComments && !showInlineLyrics,
+                        enabled = state.isExpanded && showTimedComments,
                         textColor = TextBackgroundColor,
                     )
 
