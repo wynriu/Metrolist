@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -57,7 +56,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,7 +63,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -207,7 +204,6 @@ fun Thumbnail(
     isPlayerExpanded: () -> Boolean = { true },
     isLandscape: Boolean = false,
     isListenTogetherGuest: Boolean = false,
-    onLongPressCanvas: () -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
@@ -413,7 +409,6 @@ fun Thumbnail(
                                 currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
                                 currentMediaMetadata = mediaMetadata,
                                 isPlaying = isPlaying,
-                                onLongPressCanvas = onLongPressCanvas,
                             )
                         }
                     }
@@ -513,20 +508,11 @@ private fun ThumbnailItem(
     currentMediaThumbnail: String? = null,
     currentMediaMetadata: AppMediaMetadata? = null,
     isPlaying: Boolean = false,
-    onLongPressCanvas: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
     var skipMultiplier by remember { mutableIntStateOf(1) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
-    val defaultViewConfiguration = LocalViewConfiguration.current
-    val canvasViewConfiguration = remember(defaultViewConfiguration) {
-        object : ViewConfiguration by defaultViewConfiguration {
-            override val longPressTimeoutMillis: Long = 3_000L
-        }
-    }
-
-    CompositionLocalProvider(LocalViewConfiguration provides canvasViewConfiguration) {
     Box(
         modifier = modifier
             .then(
@@ -545,11 +531,6 @@ private fun ThumbnailItem(
             }
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onLongPress = {
-                        if (!isListenTogetherGuest && item.mediaId == currentMediaId) {
-                            onLongPressCanvas()
-                        }
-                    },
                     onDoubleTap = { offset ->
                         if (isListenTogetherGuest) return@detectTapGestures
 
@@ -620,7 +601,6 @@ private fun ThumbnailItem(
                 tintColor = textBackgroundColor
             )
         }
-    }
     }
 }
 

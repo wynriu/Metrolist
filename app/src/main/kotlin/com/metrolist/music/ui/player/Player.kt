@@ -175,7 +175,7 @@ import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
 import com.metrolist.music.features.comments.TimedCommentsRepository
 import com.metrolist.music.features.comments.ui.TimedCommentsStrip
-import com.metrolist.music.features.canvas.ui.CanvasSearchDialog
+import com.metrolist.music.features.canvas.CanvasMediaCache
 import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
@@ -235,9 +235,6 @@ fun BottomSheetPlayer(
     }
 
     var isFullScreen by rememberSaveable {
-        mutableStateOf(false)
-    }
-    var showCanvasSearchDialog by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -357,17 +354,20 @@ fun BottomSheetPlayer(
 
     LaunchedEffect(mediaMetadata?.id) {
         TimedCommentsRepository.clearAll()
+        CanvasMediaCache.clearTemporary(context)
     }
 
     LaunchedEffect(playbackState) {
         if (playbackState == STATE_ENDED) {
             TimedCommentsRepository.clearAll()
+            CanvasMediaCache.clearTemporary(context)
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             TimedCommentsRepository.clearAll()
+            CanvasMediaCache.releaseTemporary(context)
         }
     }
 
@@ -649,18 +649,6 @@ fun BottomSheetPlayer(
     LaunchedEffect(sleepTimerDefault) { sleepTimerValue = sleepTimerDefault }
     val sleepTimerStopAfterCurrentSong by rememberPreference(SleepTimerStopAfterCurrentSongKey, false)
     val sleepTimerFadeOut by rememberPreference(SleepTimerFadeOutKey, false)
-
-    if (showCanvasSearchDialog) {
-        mediaMetadata?.let { metadata ->
-            CanvasSearchDialog(
-                mediaId = metadata.id,
-                initialSong = metadata.title,
-                initialArtist = metadata.artists.joinToString { it.name },
-                initialAlbum = metadata.album?.title.orEmpty(),
-                onDismiss = { showCanvasSearchDialog = false },
-            )
-        }
-    }
 
     if (showSleepTimerDialog) {
         AlertDialog(
@@ -1889,39 +1877,50 @@ fun BottomSheetPlayer(
                             ).padding(bottom = 24.dp)
                             .fillMaxSize(),
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier =
                             Modifier
                                 .weight(1f)
                                 .nestedScroll(state.preUpPostDownNestedScrollConnection),
                     ) {
-                        // Remember lambdas to prevent unnecessary recomposition
-                        val currentSliderPosition by rememberUpdatedState(sliderPosition)
-                        val sliderPositionProvider = remember { { currentSliderPosition } }
-                        val isExpandedProvider = remember(state) { { state.isExpanded } }
-                        AnimatedContent(
-                            targetState = showInlineLyrics,
-                            label = "Lyrics",
-                            transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        ) { showLyrics ->
-                            if (showLyrics) {
-                                InlineLyricsView(
-                                    mediaMetadata = mediaMetadata,
-                                    showLyrics = showLyrics,
-                                    positionProvider = { effectivePosition },
-                                )
-                            } else {
-                                Thumbnail(
-                                    sliderPositionProvider = sliderPositionProvider,
-                                    modifier = Modifier.animateContentSize(),
-                                    isPlayerExpanded = isExpandedProvider,
-                                    isLandscape = true,
-                                    isListenTogetherGuest = isListenTogetherGuest,
-                                    onLongPressCanvas = { showCanvasSearchDialog = true },
-                                )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        ) {
+                            // Remember lambdas to prevent unnecessary recomposition
+                            val currentSliderPosition by rememberUpdatedState(sliderPosition)
+                            val sliderPositionProvider = remember { { currentSliderPosition } }
+                            val isExpandedProvider = remember(state) { { state.isExpanded } }
+                            AnimatedContent(
+                                targetState = showInlineLyrics,
+                                label = "Lyrics",
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                            ) { showLyrics ->
+                                if (showLyrics) {
+                                    InlineLyricsView(
+                                        mediaMetadata = mediaMetadata,
+                                        showLyrics = showLyrics,
+                                        positionProvider = { effectivePosition },
+                                    )
+                                } else {
+                                    Thumbnail(
+                                        sliderPositionProvider = sliderPositionProvider,
+                                        modifier = Modifier.animateContentSize(),
+                                        isPlayerExpanded = isExpandedProvider,
+                                        isLandscape = true,
+                                        isListenTogetherGuest = isListenTogetherGuest,
+                                    )
+                                }
                             }
                         }
+
+                        TimedCommentsStrip(
+                            videoId = mediaMetadata?.id,
+                            positionMs = effectivePosition,
+                            enabled = state.isExpanded && showTimedComments && playbackState != STATE_ENDED,
+                            textColor = TextBackgroundColor,
+                        )
                     }
 
                     Column(
@@ -1981,7 +1980,6 @@ fun BottomSheetPlayer(
                                     modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
                                     isPlayerExpanded = isExpandedProvider,
                                     isListenTogetherGuest = isListenTogetherGuest,
-                                    onLongPressCanvas = { showCanvasSearchDialog = true },
                                 )
                             }
                         }
