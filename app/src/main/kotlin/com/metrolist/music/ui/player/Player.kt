@@ -175,7 +175,6 @@ import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
 import com.metrolist.music.features.comments.TimedCommentsRepository
 import com.metrolist.music.features.comments.ui.TimedCommentsStrip
-import com.metrolist.music.features.canvas.CanvasMediaCache
 import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
@@ -352,27 +351,19 @@ fun BottomSheetPlayer(
     val castDuration by castHandler?.castDuration?.collectAsStateWithLifecycle() ?: remember { mutableLongStateOf(0L) }
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
 
-    var lastCanvasMediaId by remember { mutableStateOf<String?>(null) }
-
     LaunchedEffect(mediaMetadata?.id) {
         TimedCommentsRepository.clearAll()
-        if (lastCanvasMediaId != null && lastCanvasMediaId != mediaMetadata?.id) {
-            CanvasMediaCache.clearTemporary(context)
-        }
-        lastCanvasMediaId = mediaMetadata?.id
     }
 
     LaunchedEffect(playbackState) {
         if (playbackState == STATE_ENDED) {
             TimedCommentsRepository.clearAll()
-            CanvasMediaCache.clearTemporary(context)
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             TimedCommentsRepository.clearAll()
-            CanvasMediaCache.releaseTemporary(context)
         }
     }
 
