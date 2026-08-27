@@ -53,6 +53,7 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.EnableSongCacheKey
 import com.metrolist.music.constants.MaxImageCacheSizeKey
 import com.metrolist.music.constants.MaxSongCacheSizeKey
+import com.metrolist.music.features.canvas.CanvasMediaCache
 import com.metrolist.music.extensions.tryOrNull
 import com.metrolist.music.ui.component.ActionPromptDialog
 import com.metrolist.music.ui.component.IconButton
@@ -66,6 +67,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okio.ByteString.Companion.encodeUtf8
 import java.io.File
 import kotlin.math.roundToInt
@@ -100,6 +102,7 @@ fun StorageSettings(
     var clearDownloads by remember { mutableStateOf(false) }
     var clearCacheDialog by remember { mutableStateOf(false) }
     var clearImageCacheDialog by remember { mutableStateOf(false) }
+    var clearCanvasCacheDialog by remember { mutableStateOf(false) }
 
     // State for the confirmation dialog
     var showCacheWarningDialog by remember { mutableStateOf(false) }
@@ -116,6 +119,7 @@ fun StorageSettings(
     var downloadCacheSize by remember {
         mutableLongStateOf(tryOrNull { downloadCache.cacheSpace } ?: 0)
     }
+    var canvasCacheSize by remember { mutableLongStateOf(0L) }
     val imageCacheProgress by animateFloatAsState(
         targetValue =
             (imageCacheSize.toFloat() / (maxImageCacheSize * 1024 * 1024L)).coerceIn(
@@ -167,6 +171,12 @@ fun StorageSettings(
         while (isActive) {
             delay(500)
             downloadCacheSize = tryOrNull { downloadCache.cacheSpace } ?: 0
+        }
+    }
+    LaunchedEffect(context) {
+        while (isActive) {
+            canvasCacheSize = withContext(Dispatchers.IO) { CanvasMediaCache.cacheSpace(context) }
+            delay(500)
         }
     }
 
@@ -241,6 +251,23 @@ fun StorageSettings(
             onCancel = { clearImageCacheDialog = false },
             content = {
                 Text(text = stringResource(R.string.clear_image_cache_dialog))
+            },
+        )
+    }
+
+    if (clearCanvasCacheDialog) {
+        ActionPromptDialog(
+            title = stringResource(R.string.clear_canvas_cache),
+            onDismiss = { clearCanvasCacheDialog = false },
+            onConfirm = {
+                coroutineScope.launch(Dispatchers.IO) {
+                    CanvasMediaCache.clear(context)
+                }
+                clearCanvasCacheDialog = false
+            },
+            onCancel = { clearCanvasCacheDialog = false },
+            content = {
+                Text(text = stringResource(R.string.clear_canvas_cache_dialog))
             },
         )
     }
@@ -472,6 +499,24 @@ fun StorageSettings(
                         },
                     ),
                 ),
+        )
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.canvas_cache),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.cached),
+                    title = { Text(stringResource(R.string.canvas_cache)) },
+                    description = {
+                        Text(text = Formatter.formatShortFileSize(context, canvasCacheSize))
+                    },
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.clear_all),
+                    title = { Text(stringResource(R.string.clear_canvas_cache)) },
+                    onClick = { clearCanvasCacheDialog = true },
+                ),
+            ),
         )
     }
 
