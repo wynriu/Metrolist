@@ -23,7 +23,6 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.TasteArtist
 import com.metrolist.innertube.models.TasteProfile
 import com.metrolist.innertube.models.TimedComment
-import com.metrolist.innertube.models.extractEmbeddedTimestamps
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import com.metrolist.innertube.models.YTItem
@@ -97,7 +96,7 @@ import kotlin.random.Random
  * Modified from [ViMusic](https://github.com/vfsfitvnm/ViMusic)
  */
 object YouTube {
-    private const val MAX_TIMED_COMMENT_PAGES = 100
+    private const val MAX_COMMENT_PAGES = 100
     private val innerTube = InnerTube()
 
     var locale: YouTubeLocale
@@ -3357,16 +3356,14 @@ object YouTube {
         }
 
     /**
-     * Loads all available user comments containing an embedded playback timestamp, for example
-     * `0:20 Great`. When available, the method uses the dedicated `Timed` item from YouTube's
-     * comments filter menu, which is the same continuation used by YouTube web. It scans every
-     * continuation page and retains only timestamped comments. The regular comments continuation
-     * remains a compatibility fallback for videos where YouTube does not expose that menu item.
+     * Loads the available highlighted/top user comments from YouTube's regular comments feed.
+     * YouTube's web comments panel uses a continuation for this feed; the parser follows that
+     * continuation across pages and accepts both legacy and modern comment renderer shapes.
      *
      * The page limit is a safety guard; the repeated-token guard is checked before every request
      * so a malformed continuation response cannot create an endless network loop.
      */
-    suspend fun timedComments(videoId: String): Result<List<TimedComment>> = runCatching {
+    suspend fun featuredComments(videoId: String): Result<List<TimedComment>> = runCatching {
         val clients = listOf(WEB, WEB_REMIX)
         var initialResponse: JsonObject? = null
         var activeClient = WEB
@@ -3384,7 +3381,9 @@ object YouTube {
                     initialResponse = candidate
                     activeClient = client
                 }
-                if (candidate.findTimedCommentContinuationToken() != null) {
+                if (candidate.findFeaturedCommentContinuationToken() != null ||
+                    candidate.findCommentContinuationToken() != null
+                ) {
                     initialResponse = candidate
                     activeClient = client
                     break
@@ -3397,12 +3396,12 @@ object YouTube {
 
         val firstResponse = initialResponse ?: throw (lastError ?: IllegalStateException("No comments response"))
         var continuation =
-            firstResponse.findTimedCommentContinuationToken()
+            firstResponse.findFeaturedCommentContinuationToken()
                 ?: firstResponse.findCommentContinuationToken()
-        val comments = firstResponse.parseTimedComments().toMutableList()
+        val comments = firstResponse.parseFeaturedComments().toMutableList()
         val seenTokens = mutableSetOf<String>()
 
-        for (page in 0 until MAX_TIMED_COMMENT_PAGES) {
+        for (page in 0 until MAX_COMMENT_PAGES) {
             val token = continuation ?: break
             if (!seenTokens.add(token)) break
             val response =
@@ -3411,13 +3410,11 @@ object YouTube {
                         .next(activeClient, null, null, null, null, null, token)
                         .bodyAsText(),
                 ).asObject()
-            comments += response.parseTimedComments()
+            comments += response.parseFeaturedComments()
             continuation = response.findContinuationToken()
         }
 
-        comments
-            .distinctBy { it.id }
-            .sortedBy { it.timestampMs }
+        comments.distinctBy { it.id }
     }
 
     private fun JsonElement.asObject(): JsonObject = this as? JsonObject ?: error("Expected a JSON object")
@@ -3488,15 +3485,23 @@ object YouTube {
             ?.objectValue("continuationCommand")
             ?.stringValue("token")
 
-    private fun JsonObject.findTimedCommentContinuationToken(): String? {
-        val timedTitles = listOf("timed", "timestamp", "time-coded", "mốc", "thời gian")
+    private fun JsonObject.findFeaturedCommentContinuationToken(): String? {
+        val featuredTitles =
+            listOf(
+                "top comments",
+                "featured comments",
+                "popular comments",
+                "bình luận nổi bật",
+                "bình luận hàng đầu",
+                "bình luận phổ biến",
+            )
         return findObjectValues("sortFilterSubMenuRenderer")
             .asSequence()
             .flatMap { it.arrayValue("subMenuItems").orEmpty().asSequence() }
             .mapNotNull { item ->
                 val itemObject = item as? JsonObject ?: return@mapNotNull null
                 val title = itemObject.textValue("title")?.lowercase() ?: return@mapNotNull null
-                if (timedTitles.none(title::contains)) return@mapNotNull null
+                if (featuredTitles.none(title::contains)) return@mapNotNull null
                 itemObject
                     .objectValue("serviceEndpoint")
                     ?.objectValue("continuationCommand")
@@ -3552,29 +3557,27 @@ object YouTube {
         return endpointToken ?: findContinuationTokens().firstOrNull()
     }
 
-    private fun JsonObject.parseTimedComments(): List<TimedComment> {
-        val legacy = findObjectValues("commentRenderer").flatMap { renderer ->
-            val commentId = renderer.stringValue("commentId") ?: return@flatMap emptyList()
-            val text = renderer.runsText("contentText")
+    private fun JsonObject.parseFeaturedComments(): List<TimedComment> {
+        val legacy = findObjectValues("commentRenderer").mapNotNull { renderer ->
+            val commentId = renderer.stringValue("commentId") ?: return@mapNotNull null
+            val text = renderer.runsText("contentText").trim()
+            if (text.isBlank()) return@mapNotNull null
             val avatarUrl =
                 renderer
                     .objectValue("authorThumbnail")
                     ?.arrayValue("thumbnails")
                     ?.lastOrNull()
                     ?.let { (it as? JsonObject)?.stringValue("url") }
-            text.extractEmbeddedTimestamps().mapIndexed { index, parsed ->
-                TimedComment("$commentId:$index", parsed.first, parsed.second, avatarUrl)
-            }
+            TimedComment(commentId, text = text, avatarUrl = avatarUrl)
         }
 
-        val framework = findObjectValues("commentEntityPayload").flatMap { payload ->
-            val properties = payload.objectValue("properties") ?: return@flatMap emptyList()
-            val commentId = properties.stringValue("commentId") ?: return@flatMap emptyList()
-            val text = properties.objectValue("content")?.stringValue("content").orEmpty()
+        val framework = findObjectValues("commentEntityPayload").mapNotNull { payload ->
+            val properties = payload.objectValue("properties") ?: return@mapNotNull null
+            val commentId = properties.stringValue("commentId") ?: return@mapNotNull null
+            val text = properties.objectValue("content")?.stringValue("content").orEmpty().trim()
+            if (text.isBlank()) return@mapNotNull null
             val avatarUrl = payload.objectValue("author")?.stringValue("avatarThumbnailUrl")
-            text.extractEmbeddedTimestamps().mapIndexed { index, parsed ->
-                TimedComment("$commentId:$index", parsed.first, parsed.second, avatarUrl)
-            }
+            TimedComment(commentId, text = text, avatarUrl = avatarUrl)
         }
 
         return (legacy + framework).distinctBy { it.id }
