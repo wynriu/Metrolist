@@ -144,7 +144,7 @@ fun StorageSettings(
     val canvasCacheProgress by animateFloatAsState(
         targetValue =
             if (maxCanvasCacheSize <= 0) {
-                0f
+                if (canvasCacheSize > 0L) 1f else 0f
             } else {
                 (canvasCacheSize.toFloat() / (maxCanvasCacheSize * 1024 * 1024L)).coerceIn(
                     0f,
@@ -573,7 +573,7 @@ fun StorageSettings(
                             Spacer(modifier = Modifier.padding(2.dp))
                             Text(
                                 text = if (maxCanvasCacheSize == 0) {
-                                    stringResource(R.string.disable)
+                                    "${Formatter.formatShortFileSize(context, canvasCacheSize)} / ${stringResource(R.string.disable)}"
                                 } else {
                                     "${Formatter.formatShortFileSize(context, canvasCacheSize)} / ${
                                         Formatter.formatShortFileSize(
