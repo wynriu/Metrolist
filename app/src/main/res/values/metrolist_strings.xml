@@ -149,10 +149,10 @@
     <string name="enable_canvas_artwork">Enable Canvas artwork</string>
     <string name="enable_canvas_artwork_desc">Show animated artwork on the current song in the Player when available</string>
     <string name="canvas_source">Canvas source</string>
-    <string name="canvas_source_auto">Automatic (Apple Music, Tidal, ViviMusic)</string>
+    <string name="canvas_source_auto">Automatic (Apple Music, Tidal, BetterLyrics)</string>
     <string name="canvas_source_apple_music">Apple Music</string>
     <string name="canvas_source_tidal">Tidal</string>
-    <string name="canvas_source_vivi_music">ViviMusic</string>
+    <string name="canvas_source_better_lyrics">BetterLyrics</string>
     <string name="auto_scroll">Re-sync</string>
     <string name="slim">Slim</string>
     <string name="slim_navbar">Slim bottom navigation bar</string>
