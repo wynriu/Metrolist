@@ -141,6 +141,7 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
+import com.metrolist.music.constants.ShowTimedCommentsKey
 import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.PlayerBackgroundStyle
@@ -152,7 +153,6 @@ import com.metrolist.music.constants.QueuePeekHeight
 import com.metrolist.music.constants.SleepTimerDefaultKey
 import com.metrolist.music.constants.SleepTimerFadeOutKey
 import com.metrolist.music.constants.SleepTimerStopAfterCurrentSongKey
-import com.metrolist.music.constants.ShowTimedCommentsKey
 import com.metrolist.music.constants.SliderStyle
 import com.metrolist.music.constants.SliderStyleKey
 import com.metrolist.music.constants.SquigglySliderKey
@@ -173,9 +173,9 @@ import com.metrolist.music.ui.component.PlayerSliderTrack
 import com.metrolist.music.ui.component.ResizableIconButton
 import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
+import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.features.comments.TimedCommentsRepository
 import com.metrolist.music.features.comments.ui.TimedCommentsStrip
-import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.theme.PlayerColorExtractor
@@ -645,6 +645,7 @@ fun BottomSheetPlayer(
     LaunchedEffect(sleepTimerDefault) { sleepTimerValue = sleepTimerDefault }
     val sleepTimerStopAfterCurrentSong by rememberPreference(SleepTimerStopAfterCurrentSongKey, false)
     val sleepTimerFadeOut by rememberPreference(SleepTimerFadeOutKey, false)
+
 
     if (showSleepTimerDialog) {
         AlertDialog(
@@ -1677,19 +1678,9 @@ fun BottomSheetPlayer(
                                             if (isListenTogetherGuest) {
                                                 if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute)
                                             } else {
-                                                if (effectiveIsPlaying) stringResource(R.string.pause) else stringResource(R.string.play)
+                                                null
                                             },
                                         modifier = Modifier.size(32.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text =
-                                            if (isListenTogetherGuest) {
-                                                if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute)
-                                            } else {
-                                                if (effectiveIsPlaying) stringResource(R.string.pause) else stringResource(R.string.play)
-                                            },
-                                        style = MaterialTheme.typography.titleMedium,
                                     )
                                 }
                             }
@@ -1873,51 +1864,45 @@ fun BottomSheetPlayer(
                             ).padding(bottom = 24.dp)
                             .fillMaxSize(),
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier =
                             Modifier
                                 .weight(1f)
                                 .nestedScroll(state.preUpPostDownNestedScrollConnection),
                     ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                        ) {
-                            // Remember lambdas to prevent unnecessary recomposition
-                            val currentSliderPosition by rememberUpdatedState(sliderPosition)
-                            val sliderPositionProvider = remember { { currentSliderPosition } }
-                            val isExpandedProvider = remember(state) { { state.isExpanded } }
-                            AnimatedContent(
-                                targetState = showInlineLyrics,
-                                label = "Lyrics",
-                                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                            ) { showLyrics ->
-                                if (showLyrics) {
-                                    InlineLyricsView(
-                                        mediaMetadata = mediaMetadata,
-                                        showLyrics = showLyrics,
-                                        positionProvider = { effectivePosition },
-                                    )
-                                } else {
-                                    Thumbnail(
-                                        sliderPositionProvider = sliderPositionProvider,
-                                        modifier = Modifier.animateContentSize(),
-                                        isPlayerExpanded = isExpandedProvider,
-                                        isLandscape = true,
-                                        isListenTogetherGuest = isListenTogetherGuest,
-                                    )
-                                }
+                        // Remember lambdas to prevent unnecessary recomposition
+                        val currentSliderPosition by rememberUpdatedState(sliderPosition)
+                        val sliderPositionProvider = remember { { currentSliderPosition } }
+                        val isExpandedProvider = remember(state) { { state.isExpanded } }
+                        AnimatedContent(
+                            targetState = showInlineLyrics,
+                            label = "Lyrics",
+                            transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        ) { showLyrics ->
+                            if (showLyrics) {
+                                InlineLyricsView(
+                                    mediaMetadata = mediaMetadata,
+                                    showLyrics = showLyrics,
+                                    positionProvider = { effectivePosition },
+                                )
+                            } else {
+                                Thumbnail(
+                                    sliderPositionProvider = sliderPositionProvider,
+                                    modifier = Modifier.animateContentSize(),
+                                    isPlayerExpanded = isExpandedProvider,
+                                    isLandscape = true,
+                                    isListenTogetherGuest = isListenTogetherGuest,
+                                )
                             }
                         }
-
-                        TimedCommentsStrip(
-                            videoId = mediaMetadata?.id,
-                            positionMs = effectivePosition,
-                            enabled = state.isExpanded && showTimedComments && playbackState != STATE_ENDED,
-                            textColor = TextBackgroundColor,
-                        )
                     }
+                    TimedCommentsStrip(
+                        videoId = mediaMetadata?.id,
+                        positionMs = effectivePosition,
+                        enabled = state.isExpanded && showTimedComments && playbackState != STATE_ENDED,
+                        textColor = TextBackgroundColor,
+                    )
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1980,7 +1965,6 @@ fun BottomSheetPlayer(
                             }
                         }
                     }
-
                     TimedCommentsStrip(
                         videoId = mediaMetadata?.id,
                         positionMs = effectivePosition,
